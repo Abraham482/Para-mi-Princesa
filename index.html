@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Para Ti</title>
+    <title>Para Mi Princesa</title>
     <style>
         :root {
             --bg-color-top: #050510;
             --bg-color-bottom: #1a1525;
+            /* Colores para los corazones */
+            --heart-color: rgba(255, 182, 193, 0.7); /* Rosa palo translúcido */
+            --heart-glow: rgba(255, 105, 180, 0.4); /* Resplandor rosa fuerte */
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,11 +21,13 @@
             background: linear-gradient(to bottom, var(--bg-color-top), var(--bg-color-bottom));
             font-family: 'Georgia', serif;
             touch-action: none;
+            position: relative; /* Necesario para las partículas absolutas */
         }
 
         main {
             position: relative; width: 100%; height: 100%;
             display: flex; justify-content: center; align-items: center;
+            z-index: 10; /* Asegura que el contenido esté sobre la lluvia */
         }
 
         canvas {
@@ -56,10 +61,10 @@
         }
 
         article.mensaje-card {
-            position: relative; z-index: 10;
+            position: relative; z-index: 20; /* Sobre el overlay */
             width: 85%; max-width: 420px;
             padding: 45px 35px; border-radius: 24px;
-            background: rgba(25, 20, 35, 0.4);
+            background: rgba(25, 20, 35, 0.5);
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.2);
@@ -91,14 +96,74 @@
             position: absolute; top: 0; left: 0;
             width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.6);
-            z-index: 5; opacity: 0;
+            z-index: 15; opacity: 0;
             pointer-events: none; transition: opacity 1s ease;
         }
 
         .overlay.activo { opacity: 1; pointer-events: auto; }
+
+        /* --- ESTILOS DE LA LLUVIA DE CORAZONES (CSS PARTICLES) --- */
+        #lluvia-corazones {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 5; /* Entre el fondo y el Canvas de tulipanes */
+            pointer-events: none; /* No interfieren con los toques */
+            overflow: hidden;
+        }
+
+        .corazon-particula {
+            position: absolute;
+            background-color: var(--heart-color);
+            display: inline-block;
+            /* Geometría para crear el corazón con CSS */
+            width: 10px; height: 10px;
+            transform: rotate(-45deg);
+            opacity: 0;
+            /* Efecto de brillo */
+            box-shadow: 0 0 10px var(--heart-glow), 0 0 20px var(--heart-glow);
+            /* Animación base */
+            animation: caida-corazon linear infinite;
+        }
+
+        .corazon-particula::before,
+        .corazon-particula::after {
+            content: "";
+            position: absolute;
+            width: 10px; height: 10px;
+            background-color: inherit;
+            border-radius: 50%;
+            box-shadow: inherit; /* Hereda el brillo */
+        }
+
+        .corazon-particula::before {
+            top: -5px; left: 0;
+        }
+
+        .corazon-particula::after {
+            top: 0; left: 5px;
+        }
+
+        /* Definición de la animación de caída */
+        @keyframes caida-corazon {
+            0% {
+                transform: translateY(-10vh) rotate(-45deg) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+                transform: translateY(0vh) rotate(-45deg) scale(1);
+            }
+            100% {
+                transform: translateY(110vh) rotate(-45deg) scale(0.8);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
+
+    <div id="lluvia-corazones"></div>
 
     <main>
         <div class="spotlight"></div>
@@ -107,15 +172,15 @@
         <div class="instruccion" id="instruccion">Toca la magia</div>
 
         <article class="mensaje-card" id="mensaje">
-    <h1>Para mi princesa hermosa 💘</h1>
-    <p>
-        Las flores del mundo real terminan por marchitarse, pero este ramo nació del código 
-        y del corazón para ser eterno, tal como lo es mi cariño por ti 
-        <br><br>
-        Quiero que sepas que <b>te adoro muchísimo</b> y que eres la luz que ilumina cada uno 
-        de mis días 🥺 gracias por ser una persona valiosa en mi vida 💖
-    </p>
-</article>
+            <h1>Para la dueña de mi corazón</h1>
+            <p>
+                Las flores del mundo real terminan por marchitarse, pero este ramo nació del código 
+                y del corazón para ser eterno, tal como lo que siento por ti. 
+                <br><br>
+                Quiero que sepas que <b>te adoro muchísimo</b> y que eres la luz que ilumina cada uno 
+                de mis días. Gracias por ser la persona más especial de mi vida.
+            </p>
+        </article>
     </main>
 
     <script>
@@ -124,15 +189,18 @@
         const mensaje = document.getElementById('mensaje');
         const overlay = document.getElementById('overlay');
         const instruccion = document.getElementById('instruccion');
+        const contenedorLluvia = document.getElementById('lluvia-corazones');
 
         let width, height;
         let time = 0;
         let globalGrowth = 0;
         let fireflies = [];
 
+        // OPTIMIZACIÓN 1: Limitar la densidad de píxeles
         function resize() {
             width = window.innerWidth;
             height = window.innerHeight;
+            // Limitamos a 2 para evitar sobrecarga en pantallas modernas
             const dpr = Math.min(window.devicePixelRatio || 1, 2); 
             canvas.width = width * dpr;
             canvas.height = height * dpr;
@@ -141,6 +209,7 @@
         }
         window.addEventListener('resize', resize);
         
+        // --- SISTEMA DE LUCIÉRNAGAS OPTIMIZADO ---
         class Firefly {
             constructor() {
                 this.reset();
@@ -164,10 +233,12 @@
             }
             draw(ctx) {
                 let alpha = this.opacity * (1 - this.life/this.maxLife);
+                // Centro brillante
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(255, 230, 150, ${alpha})`;
                 ctx.fill();
+                // Resplandor falso (mucho más rápido que shadowBlur)
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size * 3, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(255, 230, 150, ${alpha * 0.3})`;
@@ -177,10 +248,11 @@
 
         function initFireflies() {
             fireflies = [];
-            let count = window.innerWidth < 600 ? 30 : 60; 
+            let count = window.innerWidth < 600 ? 30 : 60; // Ligeramente reducido
             for(let i = 0; i < count; i++) fireflies.push(new Firefly());
         }
 
+        // --- SISTEMA DE TULIPANES OPTIMIZADO ---
         class Tulipan {
             constructor(offsetX, baseScale, hue, delay) {
                 this.targetOffsetX = offsetX; 
@@ -206,6 +278,7 @@
 
                 ctx.save();
 
+                // Tallo
                 ctx.beginPath();
                 ctx.moveTo(startX, startY + 50);
                 ctx.bezierCurveTo(startX, startY - currentHeight*0.2, startX + currentOffsetX*0.5, startY - currentHeight*0.6, endX, endY);
@@ -254,13 +327,15 @@
                 ctx.restore();
             }
 
+            // OPTIMIZACIÓN 2: Sombras Falsas
             dibujarPetalo(ctx, scale, rot, c1, c2, tieneSombra) {
                 ctx.save();
                 ctx.rotate(rot); ctx.scale(scale, scale);
                 
+                // Dibujar sombra falsa mediante desplazamiento (extremadamente más rápido)
                 if (tieneSombra) {
                     ctx.beginPath(); 
-                    ctx.moveTo(0, 5); 
+                    ctx.moveTo(0, 5); // Desplazamiento hacia abajo
                     ctx.bezierCurveTo(35, -20, 40, -80, 0, -105); 
                     ctx.bezierCurveTo(-40, -80, -35, -20, 0, 5);
                     ctx.fillStyle = 'rgba(0,0,0,0.4)'; 
@@ -280,15 +355,52 @@
             }
         }
 
+        // --- SISTEMA DE LLUVIA DE CORAZONES (JAVASCRIPT GENERATION) ---
+        function crearLluviaCorazones() {
+            // Ajustar cantidad según el ancho de pantalla
+            const cantidad = window.innerWidth < 600 ? 25 : 50; 
+            
+            for (let i = 0; i < cantidad; i++) {
+                // Crear el elemento div para el corazón
+                const corazon = document.createElement('div');
+                corazon.classList.add('corazon-particula');
+                
+                // --- Personalización aleatoria para cada corazón ---
+                
+                // Posición horizontal aleatoria (0% a 100% del ancho)
+                corazon.style.left = Math.random() * 100 + 'vw';
+                
+                // Tamaño aleatorio (escala de 0.5x a 1.5x)
+                const escala = Math.random() * 1 + 0.5;
+                corazon.style.setProperty('--base-scale', escala); // Usado en la animación
+                corazon.style.transform = `scale(${escala}) rotate(-45deg)`; 
+
+                // Duración de la caída aleatoria (3s a 8s para efecto orgánico)
+                const duracion = Math.random() * 5 + 3;
+                corazon.style.animationDuration = duracion + 's';
+                
+                // Retraso de inicio aleatorio (para que no caigan todos juntos al inicio)
+                const retraso = Math.random() * 5;
+                corazon.style.animationDelay = retraso + 's';
+                
+                // Opacidad base aleatoria
+                corazon.style.opacity = Math.random() * 0.5 + 0.3;
+
+                // Añadir al contenedor
+                contenedorLluvia.appendChild(corazon);
+            }
+        }
+
         // --- INICIALIZACIÓN ---
         resize();
+        crearLluviaCorazones(); // Iniciar la lluvia de corazones
+        
         const ramo = [];
-        const cantidad = 15; 
-        for(let i = 0; i < cantidad; i++) {
+        const cantidadTulipanes = 15; 
+        for(let i = 0; i < cantidadTulipanes; i++) {
             let offsetX = (Math.random() - 0.5) * 280; 
             let scale = 0.75 + Math.random() * 0.45;
             
-            // EL CAMBIO ESTÁ AQUÍ: 
             // Genera matices (hue) entre 290 (morado), pasando por 320-340 (rosas), hasta 360 (rojos)
             let hue = 290 + Math.random() * 70; 
             
@@ -303,6 +415,7 @@
             time += 0.015;
             if (globalGrowth < 1) globalGrowth += 0.0025; 
 
+            // Luciérnagas de primer plano (sobre el canvas)
             fireflies.forEach(f => { f.update(); f.draw(ctx); });
 
             const startX = width / 2;
