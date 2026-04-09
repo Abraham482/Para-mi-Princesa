@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Para Ti</title>
+    <style>
+        :root {
+            --bg-color-top: #050510;
+            --bg-color-bottom: #1a1525;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body, html {
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background: linear-gradient(to bottom, var(--bg-color-top), var(--bg-color-bottom));
+            font-family: 'Georgia', serif;
+            touch-action: none;
+        }
+
+        main {
+            position: relative; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        canvas {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%; z-index: 1; cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .spotlight {
+            position: absolute;
+            bottom: -20%; left: 50%;
+            transform: translateX(-50%);
+            width: 100vw; height: 70vh;
+            background: radial-gradient(ellipse at bottom, rgba(255, 105, 180, 0.15) 0%, rgba(0,0,0,0) 60%);
+            z-index: 0; pointer-events: none;
+        }
+
+        .instruccion {
+            position: absolute; bottom: 8%;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1rem; letter-spacing: 3px;
+            z-index: 2; pointer-events: none;
+            animation: latido 3s ease-in-out infinite;
+            text-transform: uppercase;
+            transition: opacity 0.5s ease;
+        }
+
+        @keyframes latido {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        }
+
+        article.mensaje-card {
+            position: relative; z-index: 10;
+            width: 85%; max-width: 420px;
+            padding: 45px 35px; border-radius: 24px;
+            background: rgba(25, 20, 35, 0.4);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.2);
+            text-align: center;
+            opacity: 0; visibility: hidden;
+            transform: translateY(50px) scale(0.95);
+            transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        article.mensaje-card.activo {
+            opacity: 1; visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        h1 {
+            color: #ff9fb3;
+            font-size: 1.9rem; margin-bottom: 25px;
+            font-style: italic; font-weight: 300;
+            text-shadow: 0 0 15px rgba(255, 159, 179, 0.4);
+        }
+
+        p {
+            color: #eaeaea; font-size: 1.15rem;
+            line-height: 1.9; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            font-weight: 300;
+        }
+
+        .overlay {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 5; opacity: 0;
+            pointer-events: none; transition: opacity 1s ease;
+        }
+
+        .overlay.activo { opacity: 1; pointer-events: auto; }
+    </style>
+</head>
+<body>
+
+    <main>
+        <div class="spotlight"></div>
+        <canvas id="lienzo"></canvas>
+        <div class="overlay" id="overlay"></div>
+        <div class="instruccion" id="instruccion">Toca la magia</div>
+
+        <article class="mensaje-card" id="mensaje">
+            <h1>Para la chica que adoro</h1>
+            <p>Así como este ramo fue creado línea por línea solo para ti, mi cariño crece cada día. Quería hacerte un detalle digital que nunca se marchite, para que siempre recuerdes lo hermosa y especial que eres en mi vida.</p>
+        </article>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('lienzo');
+        const ctx = canvas.getContext('2d');
+        const mensaje = document.getElementById('mensaje');
+        const overlay = document.getElementById('overlay');
+        const instruccion = document.getElementById('instruccion');
+
+        let width, height;
+        let time = 0;
+        let globalGrowth = 0;
+        let fireflies = [];
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            const dpr = Math.min(window.devicePixelRatio || 1, 2); 
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+            initFireflies();
+        }
+        window.addEventListener('resize', resize);
+        
+        class Firefly {
+            constructor() {
+                this.reset();
+                this.y = Math.random() * height; 
+            }
+            reset() {
+                this.x = Math.random() * width;
+                this.y = height + Math.random() * 100;
+                this.size = Math.random() * 1.5 + 0.5;
+                this.speedY = -(Math.random() * 0.5 + 0.2);
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.opacity = Math.random() * 0.5 + 0.2;
+                this.life = 0;
+                this.maxLife = Math.random() * 100 + 50;
+            }
+            update() {
+                this.y += this.speedY;
+                this.x += this.speedX + Math.sin(time * 2 + this.life * 0.1) * 0.5;
+                this.life++;
+                if (this.y < 0 || this.life > this.maxLife) this.reset();
+            }
+            draw(ctx) {
+                let alpha = this.opacity * (1 - this.life/this.maxLife);
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 230, 150, ${alpha})`;
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * 3, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 230, 150, ${alpha * 0.3})`;
+                ctx.fill();
+            }
+        }
+
+        function initFireflies() {
+            fireflies = [];
+            let count = window.innerWidth < 600 ? 30 : 60; 
+            for(let i = 0; i < count; i++) fireflies.push(new Firefly());
+        }
+
+        class Tulipan {
+            constructor(offsetX, baseScale, hue, delay) {
+                this.targetOffsetX = offsetX; 
+                this.baseScale = baseScale; 
+                this.hue = hue; 
+                this.delay = delay; 
+                this.swaySpeed = 0.8 + Math.random() * 0.5;
+                this.swayOffset = Math.random() * Math.PI * 2;
+            }
+
+            dibujar(ctx, startX, startY, globalGrowth, time) {
+                let localProgress = Math.max(0, Math.min(1, (globalGrowth - this.delay) * 2.5));
+                if (localProgress === 0) return;
+                
+                let ease = localProgress < 0.5 ? 4 * localProgress * localProgress * localProgress : 1 - Math.pow(-2 * localProgress + 2, 3) / 2;
+
+                const currentHeight = (height * 0.45 * this.baseScale) * ease;
+                const windSway = Math.sin(time * this.swaySpeed + this.swayOffset) * 30 * this.baseScale;
+                const currentOffsetX = this.targetOffsetX * ease;
+                
+                const endX = startX + currentOffsetX + windSway;
+                const endY = startY - currentHeight;
+
+                ctx.save();
+
+                ctx.beginPath();
+                ctx.moveTo(startX, startY + 50);
+                ctx.bezierCurveTo(startX, startY - currentHeight*0.2, startX + currentOffsetX*0.5, startY - currentHeight*0.6, endX, endY);
+                ctx.lineWidth = 6 * this.baseScale;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#152b12'; 
+                ctx.stroke();
+                
+                ctx.lineWidth = 2.5 * this.baseScale;
+                ctx.strokeStyle = '#3a6e32';
+                ctx.stroke();
+
+                if (localProgress > 0.4) {
+                    let leafScale = (localProgress - 0.4) / 0.6 * this.baseScale;
+                    this.dibujarHoja(ctx, startX + currentOffsetX*0.3, startY - currentHeight*0.3, leafScale, -0.7 + windSway*0.01);
+                    this.dibujarHoja(ctx, startX + currentOffsetX*0.7, startY - currentHeight*0.6, leafScale*0.8, 0.6 + windSway*0.01);
+                }
+
+                if (localProgress > 0.6) {
+                    let flowerScale = (localProgress - 0.6) / 0.4 * this.baseScale;
+                    ctx.translate(endX, endY);
+                    ctx.rotate(windSway * 0.015 + (currentOffsetX * 0.002)); 
+
+                    let darkColor = `hsl(${this.hue}, 85%, 15%)`;
+                    let midColor = `hsl(${this.hue}, 95%, 50%)`;
+                    let lightColor = `hsl(${this.hue + 15}, 100%, 70%)`;
+
+                    this.dibujarPetalo(ctx, flowerScale, -0.4, darkColor, `hsl(${this.hue}, 80%, 35%)`, false);
+                    this.dibujarPetalo(ctx, flowerScale, 0.4, darkColor, `hsl(${this.hue}, 80%, 35%)`, false);
+                    this.dibujarPetalo(ctx, flowerScale*1.05, -0.2, darkColor, midColor, true);
+                    this.dibujarPetalo(ctx, flowerScale*1.05, 0.2, darkColor, midColor, true);
+                    this.dibujarPetalo(ctx, flowerScale*1.15, 0, darkColor, lightColor, true);
+                }
+                ctx.restore();
+            }
+
+            dibujarHoja(ctx, x, y, scale, rot) {
+                ctx.save();
+                ctx.translate(x, y); ctx.rotate(rot); ctx.scale(scale, scale);
+                const grad = ctx.createLinearGradient(0, 0, 20, -100);
+                grad.addColorStop(0, '#0d1a0b'); grad.addColorStop(1, '#2c5425');
+                ctx.beginPath(); ctx.moveTo(0, 0);
+                ctx.quadraticCurveTo(30, -40, 5, -110);
+                ctx.quadraticCurveTo(-15, -40, 0, 0);
+                ctx.fillStyle = grad; ctx.fill();
+                ctx.restore();
+            }
+
+            dibujarPetalo(ctx, scale, rot, c1, c2, tieneSombra) {
+                ctx.save();
+                ctx.rotate(rot); ctx.scale(scale, scale);
+                
+                if (tieneSombra) {
+                    ctx.beginPath(); 
+                    ctx.moveTo(0, 5); 
+                    ctx.bezierCurveTo(35, -20, 40, -80, 0, -105); 
+                    ctx.bezierCurveTo(-40, -80, -35, -20, 0, 5);
+                    ctx.fillStyle = 'rgba(0,0,0,0.4)'; 
+                    ctx.fill();
+                }
+
+                const grad = ctx.createLinearGradient(0, 0, 0, -110);
+                grad.addColorStop(0, '#0a0000');
+                grad.addColorStop(0.4, c1);
+                grad.addColorStop(1, c2);
+
+                ctx.beginPath(); ctx.moveTo(0, 0);
+                ctx.bezierCurveTo(35, -25, 40, -85, 0, -110); 
+                ctx.bezierCurveTo(-40, -85, -35, -25, 0, 0);
+                ctx.fillStyle = grad; ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // --- INICIALIZACIÓN ---
+        resize();
+        const ramo = [];
+        const cantidad = 15; 
+        for(let i = 0; i < cantidad; i++) {
+            let offsetX = (Math.random() - 0.5) * 280; 
+            let scale = 0.75 + Math.random() * 0.45;
+            
+            // EL CAMBIO ESTÁ AQUÍ: 
+            // Genera matices (hue) entre 290 (morado), pasando por 320-340 (rosas), hasta 360 (rojos)
+            let hue = 290 + Math.random() * 70; 
+            
+            let delay = Math.random() * 0.4;
+            ramo.push(new Tulipan(offsetX, scale, hue, delay));
+        }
+        ramo.sort((a, b) => (Math.abs(b.targetOffsetX) - Math.abs(a.targetOffsetX)));
+
+        // --- BUCLE PRINCIPAL ---
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            time += 0.015;
+            if (globalGrowth < 1) globalGrowth += 0.0025; 
+
+            fireflies.forEach(f => { f.update(); f.draw(ctx); });
+
+            const startX = width / 2;
+            const startY = height + 40; 
+            ramo.forEach(tulipan => tulipan.dibujar(ctx, startX, startY, globalGrowth, time));
+            
+            requestAnimationFrame(animate);
+        }
+
+        // --- INTERACCIÓN Y MAGIA ---
+        function explotarParticulas(x, y) {
+            for(let i=0; i<25; i++) { 
+                let f = new Firefly();
+                f.x = x; f.y = y;
+                f.speedX = (Math.random() - 0.5) * 8;
+                f.speedY = (Math.random() - 0.5) * 8;
+                f.maxLife = 30 + Math.random()*30;
+                fireflies.push(f);
+            }
+        }
+
+        function manejarToque(e) {
+            if(e) e.preventDefault(); 
+            
+            let clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            let clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+            if (globalGrowth > 0.7) {
+                const activo = mensaje.classList.contains('activo');
+                if (!activo) {
+                    explotarParticulas(clientX || width/2, clientY || height/2); 
+                    mensaje.classList.add('activo');
+                    overlay.classList.add('activo');
+                    instruccion.style.opacity = '0';
+                } else {
+                    mensaje.classList.remove('activo');
+                    overlay.classList.remove('activo');
+                }
+            }
+        }
+
+        canvas.addEventListener('click', manejarToque);
+        canvas.addEventListener('touchstart', manejarToque, {passive: false});
+        overlay.addEventListener('click', manejarToque);
+        overlay.addEventListener('touchstart', manejarToque, {passive: false});
+
+        animate();
+    </script>
+</body>
+</html>
