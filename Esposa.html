@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nuestra Promesa Real</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Montserrat:wght@300;400;600&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #050810; 
+            font-family: 'Montserrat', sans-serif;
+            color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #matrix-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0; 
+            transition: opacity 2s ease-in;
+            pointer-events: none;
+        }
+
+        .milky-way {
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 60%);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        #particles-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(255,255,255,0.8);
+            animation: twinkle linear infinite;
+        }
+
+        .floating-heart {
+            position: absolute;
+            color: #ff9a9e;
+            font-size: 1.5rem;
+            opacity: 0.6;
+            animation: floatUp linear forwards;
+            filter: drop-shadow(0 0 8px rgba(255, 154, 158, 0.5));
+        }
+
+        .petal {
+            position: absolute;
+            width: 16px;
+            height: 20px;
+            background: linear-gradient(135deg, #ff9a9e 0%, #ff758f 100%);
+            border-radius: 15px 0 15px 0;
+            box-shadow: inset 2px 2px 5px rgba(255,255,255,0.3), 0 0 10px rgba(255, 117, 143, 0.3);
+            opacity: 0.7;
+            animation: fall linear forwards;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            width: 90%;
+            max-width: 800px;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Tañamos usando clamp() para fluidez en PC y Móvil */
+        .message-line {
+            font-size: clamp(1.1rem, 4vw, 1.5rem);
+            line-height: 1.6;
+            margin: clamp(10px, 3vw, 15px) 0; 
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 1), 0 0 15px rgba(0,0,0,0.8);
+        }
+
+        .message-line.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .highlight {
+            font-family: 'Cinzel', serif;
+            color: #ffb6c1;
+            font-size: clamp(1.8rem, 6vw, 2.5rem);
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-top: clamp(15px, 5vw, 25px);
+            text-shadow: 0 0 15px rgba(255, 182, 193, 0.8), 0 2px 5px rgba(0,0,0,1);
+        }
+
+        .btn-interact {
+            margin-top: 30px;
+            padding: 12px 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 182, 193, 0.6);
+            color: #ffb6c1;
+            font-size: clamp(0.9rem, 3vw, 1.1rem);
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            backdrop-filter: blur(4px);
+            -webkit-tap-highlight-color: transparent; /* Quita el recuadro azul al tocar en celulares */
+        }
+
+        .btn-interact:hover, .btn-interact:active {
+            background: rgba(255, 182, 193, 0.2);
+            box-shadow: 0 0 20px rgba(255, 182, 193, 0.6);
+            transform: scale(1.05);
+            color: white;
+        }
+
+        .hidden { display: none !important; }
+
+        .final-heart {
+            font-size: clamp(3.5rem, 12vw, 5rem);
+            margin-top: 20px;
+            filter: drop-shadow(0 0 30px rgba(255, 105, 180, 0.8));
+            animation: heartbeat 1.5s infinite;
+        }
+
+        /* Animaciones */
+        @keyframes twinkle {
+            0% { opacity: 0.1; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0.1; transform: scale(0.8); }
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(110vh) rotate(0deg) scale(0.8); opacity: 0; }
+            10% { opacity: 0.8; }
+            90% { opacity: 0.8; }
+            100% { transform: translateY(-10vh) rotate(360deg) scale(1.2); opacity: 0; }
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(-10vh) rotateX(0deg) rotateY(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(110vh) rotateX(360deg) rotateY(180deg); opacity: 0; }
+        }
+
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            15% { transform: scale(1.15); }
+            30% { transform: scale(1); }
+            45% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        /* Ajustes extra para pantallas muy pequeñas (Ej: iPhone SE) */
+        @media (max-width: 400px) {
+            .content { padding: 10px; }
+            .message-line { line-height: 1.4; margin: 8px 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="matrix-canvas"></canvas>
+    
+    <div class="milky-way"></div>
+    <div id="particles-container"></div>
+
+    <div class="content">
+        <p class="message-line">Todavía no dejo de sonreír por ese "Sí"🥹</p>
+        <p class="message-line">Sé que por ahora fue una propuesta de mentiras,<br>una pequeña prueba</p>
+        <p class="message-line">Pero quería hacer esto para dejarte algo claro:</p>
+        <p class="message-line">Mi mayor meta es que llegue el día en que esa pregunta sea 100% real</p>
+        <p class="message-line highlight">Y QUIERO QUE SEA SOLO CONTIGO</p>
+        
+        <div id="heart-display" class="hidden final-heart">💍❤️</div>
+        <button class="btn-interact" id="btn-next">Descubrir mi promesa</button>
+    </div>
+
+    <audio id="love-song" loop>
+        <source src="Cereza.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        const container = document.getElementById('particles-container');
+        const isMobile = window.innerWidth < 768; // Detectamos si es pantalla pequeña
+
+        // Generar Estrellas (Menos cantidad en móviles para mejor rendimiento)
+        const starCount = isMobile ? 80 : 150;
+        for (let i = 0; i < starCount; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            const size = Math.random() * 2.5 + 0.5;
+            star.style.width = size + 'px';
+            star.style.height = size + 'px';
+            star.style.left = Math.random() * 100 + 'vw';
+            star.style.top = Math.random() * 100 + 'vh';
+            star.style.animationDuration = (Math.random() * 4 + 2) + 's';
+            star.style.animationDelay = (Math.random() * 2) + 's';
+            container.appendChild(star);
+        }
+
+        function createHeart() {
+            const heart = document.createElement('div');
+            heart.className = 'floating-heart';
+            heart.innerHTML = '❤';
+            heart.style.left = Math.random() * 100 + 'vw';
+            heart.style.animationDuration = (Math.random() * 6 + 8) + 's';
+            container.appendChild(heart);
+            setTimeout(() => heart.remove(), 14000);
+        }
+
+        function createPetal() {
+            const petal = document.createElement('div');
+            petal.className = 'petal';
+            petal.style.left = (Math.random() * 120 - 10) + 'vw';
+            const scale = Math.random() * 0.5 + (isMobile ? 0.3 : 0.5); // Ligeramente más chicos en móvil
+            petal.style.transform = `scale(${scale})`;
+            petal.style.animationDuration = (Math.random() * 5 + 6) + 's';
+            container.appendChild(petal);
+            setTimeout(() => petal.remove(), 11000);
+        }
+
+        let heartInterval = setInterval(createHeart, 1200);
+        let petalInterval = setInterval(createPetal, 800);
+
+        // Lluvia Matrix
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Ajuste de tamaño de fuente de Matrix para celulares
+        let matrixFontSize = isMobile ? 16 : 22; 
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            matrixFontSize = window.innerWidth < 768 ? 16 : 22; // Reajusta si gira la pantalla
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const words = ["TE", "AMO", "♥"];
+        let columns = canvas.width / matrixFontSize;
+        let drops = [];
+
+        for (let x = 0; x < columns; x++) {
+            drops[x] = Math.random() * -100;
+        }
+
+        function drawMatrix() {
+            // Se adapta a cambios de resolución en tiempo real
+            if (drops.length !== Math.floor(canvas.width / matrixFontSize)) {
+                columns = canvas.width / matrixFontSize;
+                drops = [];
+                for (let x = 0; x < columns; x++) { drops[x] = Math.random() * -100; }
+            }
+
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.globalCompositeOperation = 'source-over';
+
+            ctx.fillStyle = 'rgba(255, 182, 193, 0.8)'; 
+            ctx.font = '500 ' + matrixFontSize + 'px "Montserrat"';
+            ctx.shadowBlur = isMobile ? 4 : 8; // Menos sombra en móvil para fluidez
+            ctx.shadowColor = 'rgba(255, 182, 193, 0.5)';
+            ctx.textAlign = 'center';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = words[Math.floor(Math.random() * words.length)];
+                ctx.fillText(text, i * matrixFontSize + (matrixFontSize/2), drops[i] * matrixFontSize);
+
+                if (drops[i] * matrixFontSize > canvas.height && Math.random() > 0.96) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        const lines = document.querySelectorAll('.message-line');
+        const btn = document.getElementById('btn-next');
+        const heartDisplay = document.getElementById('heart-display');
+        const song = document.getElementById('love-song');
+        let currentStep = 0;
+
+        btn.addEventListener('click', () => {
+            if (currentStep === 0) {
+                // El clic inicializa el audio, requerido por iOS Safari y Chrome Android
+                song.play().catch(e => console.log("Se requiere interacción para audio"));
+            }
+
+            if (currentStep < lines.length) {
+                lines[currentStep].classList.add('active');
+                
+                for(let i=0; i<3; i++) {
+                    setTimeout(createHeart, i*150);
+                    setTimeout(createPetal, i*100);
+                }
+                
+                currentStep++;
+            }
+
+            if (currentStep === lines.length) {
+                btn.style.opacity = '0';
+                btn.style.pointerEvents = 'none';
+                
+                setTimeout(() => {
+                    heartDisplay.classList.remove('hidden');
+                    
+                    canvas.style.opacity = '1';
+                    setInterval(drawMatrix, 60); 
+
+                    clearInterval(heartInterval);
+                    clearInterval(petalInterval);
+                    setInterval(createHeart, 400);
+                    setInterval(createPetal, 200);
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>
