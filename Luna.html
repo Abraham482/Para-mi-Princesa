@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Reflejo Bajo la Luna</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@200&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0a0a2a;
+            font-family: 'Inter', sans-serif;
+            /* Prevención de selección en móviles */
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+        #instruction {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.9; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="lakeCanvas"></canvas>
+    <div id="instruction">Desliza sobre el agua para crear magia</div>
+
+    <script>
+        const canvas = document.getElementById('lakeCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const moonCanvas = document.createElement('canvas');
+        const moonCtx = moonCanvas.getContext('2d');
+
+        let width, height, horizonY, moonRadius, moonX, moonY;
+        
+        let prevX = null;
+        let prevY = null;
+        const minSpawnDistance = 25; 
+        
+        const theme = {
+            skyTop: '#010014',
+            skyMid: '#090947',
+            skyBot: '#6a1a41', 
+            moonGlow: '#ffb6c1',
+            moonC1: '#fff0f5', 
+            moonC2: '#e0c0d0', 
+            waterTop: '#3d0c2b',
+            waterBot: '#050212',
+            accent: '255, 182, 193' 
+        };
+
+        const messages = ["TE AMO", "TE QUIERO", "SIEMPRE", "DESTINO", "MI LUZ", "ETERNIDAD"];
+        
+        const stars = [];
+        const craters = [];
+        const ripples = [];
+        const words = [];
+        const ambientWaves = [];
+
+        function resizeCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            
+            const isMobile = width <= 768;
+            horizonY = height * 0.55;
+            moonRadius = Math.min(width, height) * (isMobile ? 0.25 : 0.15);
+            moonX = width / 2;
+            moonY = horizonY - moonRadius - (isMobile ? 20 : 50);
+
+            initEntities();
+            cacheMoon();
+        }
+
+        function initEntities() {
+            stars.length = 0;
+            craters.length = 0;
+            ambientWaves.length = 0;
+
+            for (let i = 0; i < 300; i++) {
+                stars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * horizonY,
+                    r: Math.random() * 1.5,
+                    baseAlpha: 0.3 + Math.random() * 0.7,
+                    speed: Math.random() * 0.05
+                });
+            }
+
+            for (let i = 0; i < 20; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const r = Math.random() * moonRadius * 0.85;
+                craters.push({
+                    x: Math.cos(angle) * r,
+                    y: Math.sin(angle) * r,
+                    radius: 5 + Math.random() * (moonRadius / 12),
+                    alpha: 0.1 + Math.random() * 0.1
+                });
+            }
+
+            for (let i = 0; i < 150; i++) {
+                spawnAmbientWave(true);
+            }
+        }
+
+        function spawnAmbientWave(initial = false) {
+            const y = horizonY + Math.random() * (height - horizonY);
+            const depth = (y - horizonY) / (height - horizonY);
+            ambientWaves.push({
+                x: Math.random() * width,
+                y: y,
+                w: (5 + Math.random() * 15) * (1 + depth * 3),
+                h: 0.5 + depth * 1,
+                maxAlpha: (0.1 + Math.random() * 0.6) * 0.5,
+                alpha: initial ? Math.random() * 0.3 : 0,
+                speedX: (Math.random() - 0.5) * 0.3,
+                fadeSpeed: 0.005 + Math.random() * 0.01,
+                fadingIn: !initial || Math.random() > 0.5
+            });
+        }
+
+        function cacheMoon() {
+            const size = (moonRadius + 80) * 2;
+            moonCanvas.width = size;
+            moonCanvas.height = size;
+            const cx = size / 2;
+            const cy = size / 2;
+
+            moonCtx.shadowBlur = 60;
+            moonCtx.shadowColor = theme.moonGlow;
+
+            const gradient = moonCtx.createRadialGradient(cx, cy, moonRadius * 0.8, cx, cy, moonRadius);
+            gradient.addColorStop(0, theme.moonC1);
+            gradient.addColorStop(0.8, theme.moonC1);
+            gradient.addColorStop(1, theme.moonC2);
+
+            moonCtx.beginPath();
+            moonCtx.arc(cx, cy, moonRadius, 0, Math.PI * 2);
+            moonCtx.fillStyle = gradient;
+            moonCtx.fill();
+            moonCtx.shadowBlur = 0;
+
+            craters.forEach(c => {
+                moonCtx.beginPath();
+                moonCtx.arc(cx + c.x, cy + c.y, c.radius, 0, Math.PI * 2);
+                moonCtx.fillStyle = `rgba(200, 150, 180, ${c.alpha})`;
+                moonCtx.fill();
+                
+                moonCtx.beginPath();
+                moonCtx.arc(cx + c.x + c.radius * 0.3, cy + c.y + c.radius * 0.3, c.radius * 1.1, 0, Math.PI * 2);
+                moonCtx.fillStyle = `rgba(0, 0, 0, 0.05)`;
+                moonCtx.fill();
+            });
+        }
+
+        function drawMoon(x, y) {
+            const offset = moonRadius + 80;
+            ctx.drawImage(moonCanvas, x - offset, y - offset);
+        }
+
+        function handleInteraction(e) {
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+
+            let clientX, clientY;
+
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else if (!e.touches) {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            } else {
+                return; 
+            }
+
+            if (clientY > horizonY) {
+                if (prevX === null || prevY === null) {
+                    prevX = clientX;
+                    prevY = clientY;
+                    return;
+                }
+
+                const distance = Math.sqrt(Math.pow(clientX - prevX, 2) + Math.pow(clientY - prevY, 2));
+
+                if (distance >= minSpawnDistance) {
+                    ripples.push({
+                        x: clientX,
+                        y: clientY,
+                        radius: 1,
+                        maxRadius: 50 + Math.random() * 100,
+                        alpha: 0.8,
+                        speed: 1 + Math.random()
+                    });
+
+                    words.push({
+                        x: clientX,
+                        y: clientY,
+                        text: messages[Math.floor(Math.random() * messages.length)],
+                        life: 0,
+                        maxLife: 150 + Math.random() * 100,
+                        alpha: 0,
+                        speedY: 0.5 + Math.random() * 1,
+                        swayOffset: Math.random() * Math.PI * 2
+                    });
+
+                    prevX = clientX;
+                    prevY = clientY;
+                }
+            }
+        }
+
+        function clearInteraction() {
+            prevX = null;
+            prevY = null;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
+            skyGrad.addColorStop(0, theme.skyTop);
+            skyGrad.addColorStop(0.5, theme.skyMid);
+            skyGrad.addColorStop(1, theme.skyBot);
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            stars.forEach(star => {
+                const alpha = Math.max(0, star.baseAlpha + Math.sin(Date.now() * star.speed) * 0.3);
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.fill();
+            });
+
+            drawMoon(moonX, moonY);
+
+            const waterGrad = ctx.createLinearGradient(0, horizonY, 0, height);
+            waterGrad.addColorStop(0, theme.waterTop);
+            waterGrad.addColorStop(1, theme.waterBot);
+            ctx.fillStyle = waterGrad;
+            ctx.fillRect(0, horizonY, width, height - horizonY);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, horizonY, width, height - horizonY);
+            ctx.clip();
+            ctx.globalAlpha = 0.4;
+            drawMoon(moonX, horizonY + (horizonY - moonY));
+            
+            ctx.fillStyle = `rgba(10, 10, 42, 0.4)`;
+            ctx.fillRect(0, horizonY, width, height - horizonY);
+            ctx.restore();
+
+            for (let i = ambientWaves.length - 1; i >= 0; i--) {
+                let w = ambientWaves[i];
+                w.x += w.speedX;
+                
+                if (w.fadingIn) {
+                    w.alpha += w.fadeSpeed;
+                    if (w.alpha >= w.maxAlpha) w.fadingIn = false;
+                } else {
+                    w.alpha -= w.fadeSpeed;
+                    if (w.alpha <= 0) {
+                        ambientWaves.splice(i, 1);
+                        spawnAmbientWave();
+                        continue;
+                    }
+                }
+
+                ctx.beginPath();
+                ctx.ellipse(w.x, w.y, w.w, w.h, 0, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${theme.accent}, ${w.alpha})`;
+                ctx.fill();
+            }
+
+            for (let i = ripples.length - 1; i >= 0; i--) {
+                let r = ripples[i];
+                r.radius += r.speed;
+                r.alpha -= r.speed / r.maxRadius;
+
+                if (r.alpha <= 0) {
+                    ripples.splice(i, 1);
+                } else {
+                    ctx.beginPath();
+                    ctx.ellipse(r.x, r.y, r.radius * 2, r.radius * 0.5, 0, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(${theme.accent}, ${r.alpha * 0.5})`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+
+            for (let i = words.length - 1; i >= 0; i--) {
+                let w = words[i];
+                w.life++;
+                w.y -= w.speedY;
+                w.x += Math.sin(w.life * 0.05 + w.swayOffset) * 0.5;
+
+                if (w.life < 30) {
+                    w.alpha = w.life / 30;
+                } else if (w.life > w.maxLife - 50) {
+                    w.alpha = (w.maxLife - w.life) / 50;
+                } else {
+                    w.alpha = 1;
+                }
+
+                if (w.life >= w.maxLife) {
+                    words.splice(i, 1);
+                } else {
+                    ctx.save();
+                    ctx.font = "18px 'Cinzel', serif";
+                    ctx.fillStyle = `rgba(255, 182, 193, ${w.alpha})`;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = theme.moonGlow;
+                    ctx.textAlign = "center";
+                    ctx.fillText(w.text, w.x, w.y);
+                    ctx.restore();
+                }
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        
+        canvas.addEventListener('mousemove', handleInteraction);
+        canvas.addEventListener('mouseleave', clearInteraction);
+        
+        canvas.addEventListener('touchstart', handleInteraction, {passive: false});
+        canvas.addEventListener('touchmove', handleInteraction, {passive: false});
+        canvas.addEventListener('touchend', clearInteraction);
+
+        resizeCanvas();
+        animate();
+    </script>
+</body>
+</html>
