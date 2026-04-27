@@ -16,18 +16,19 @@
             overflow: hidden;
             background-color: #0a0a2a;
             font-family: 'Inter', sans-serif;
-            /* Prevención de selección en móviles */
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
+            touch-action: none;
         }
         canvas {
             display: block;
-            touch-action: none;
+            width: 100vw;
+            height: 100vh;
         }
         #instruction {
             position: absolute;
-            bottom: 20px;
+            bottom: 30px;
             width: 100%;
             text-align: center;
             color: rgba(255, 255, 255, 0.6);
@@ -55,10 +56,11 @@
         const moonCtx = moonCanvas.getContext('2d');
 
         let width, height, horizonY, moonRadius, moonX, moonY;
+        let lastWidth = 0; 
         
         let prevX = null;
         let prevY = null;
-        const minSpawnDistance = 25; 
+        const minSpawnDistance = 20; 
         
         const theme = {
             skyTop: '#010014',
@@ -81,6 +83,9 @@
         const ambientWaves = [];
 
         function resizeCanvas() {
+            if (window.innerWidth === lastWidth && width) return;
+            lastWidth = window.innerWidth;
+
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
             
@@ -180,22 +185,11 @@
             ctx.drawImage(moonCanvas, x - offset, y - offset);
         }
 
-        function handleInteraction(e) {
-            if (e.cancelable) {
-                e.preventDefault();
-            }
+        function handlePointerMove(e) {
+            if (e.pointerType === 'touch' && !e.isPrimary) return;
 
-            let clientX, clientY;
-
-            if (e.touches && e.touches.length > 0) {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-            } else if (!e.touches) {
-                clientX = e.clientX;
-                clientY = e.clientY;
-            } else {
-                return; 
-            }
+            const clientX = e.clientX;
+            const clientY = e.clientY;
 
             if (clientY > horizonY) {
                 if (prevX === null || prevY === null) {
@@ -211,7 +205,7 @@
                         x: clientX,
                         y: clientY,
                         radius: 1,
-                        maxRadius: 50 + Math.random() * 100,
+                        maxRadius: 40 + Math.random() * 80,
                         alpha: 0.8,
                         speed: 1 + Math.random()
                     });
@@ -221,9 +215,9 @@
                         y: clientY,
                         text: messages[Math.floor(Math.random() * messages.length)],
                         life: 0,
-                        maxLife: 150 + Math.random() * 100,
+                        maxLife: 120 + Math.random() * 80,
                         alpha: 0,
-                        speedY: 0.5 + Math.random() * 1,
+                        speedY: 0.6 + Math.random() * 0.8,
                         swayOffset: Math.random() * Math.PI * 2
                     });
 
@@ -344,12 +338,14 @@
 
         window.addEventListener('resize', resizeCanvas);
         
-        canvas.addEventListener('mousemove', handleInteraction);
-        canvas.addEventListener('mouseleave', clearInteraction);
-        
-        canvas.addEventListener('touchstart', handleInteraction, {passive: false});
-        canvas.addEventListener('touchmove', handleInteraction, {passive: false});
-        canvas.addEventListener('touchend', clearInteraction);
+        canvas.addEventListener('pointerdown', (e) => {
+            clearInteraction();
+            handlePointerMove(e);
+        });
+        canvas.addEventListener('pointermove', handlePointerMove);
+        canvas.addEventListener('pointerup', clearInteraction);
+        canvas.addEventListener('pointercancel', clearInteraction);
+        canvas.addEventListener('pointerleave', clearInteraction);
 
         resizeCanvas();
         animate();
