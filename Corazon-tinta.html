@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corazón con Efecto Pincel y Tinta</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #fefaf5;
+            /* Textura de papel de arroz de fondo original */
+            background-image: url('https://www.transparenttextures.com/patterns/rice-paper-3.png');
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Panel de Controles Superior Derecho */
+        #controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(250, 240, 230, 0.85);
+            border: 1px solid #c9bbae;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        #controls label {
+            font-size: 14px;
+            color: #5a3f2e;
+            font-weight: 700;
+        }
+
+        #colorPicker {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 35px;
+            background-color: transparent;
+            border: 1px solid #bba89b;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #colorPicker::-webkit-color-swatch {
+            border-radius: 4px;
+            border: none;
+        }
+
+        #colorPicker::-moz-color-swatch {
+            border-radius: 4px;
+            border: none;
+        }
+
+        #redrawButton {
+            padding: 10px 15px;
+            font-size: 16px;
+            background-color: #5a3f2e;
+            color: #fefaf5;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+
+        #redrawButton:hover {
+            background-color: #8a6b54;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="controls">
+        <label for="colorPicker">Color de Pintura:</label>
+        <input type="color" id="colorPicker" value="#ff0055">
+        <button id="redrawButton">Dibujar de Nuevo</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const redrawButton = document.getElementById("redrawButton");
+        const colorPicker = document.getElementById("colorPicker");
+
+        let animationFrameId;
+        let scale;
+        let paintColor = colorPicker.value;
+        let t = 0;
+        const maxT = 2 * Math.PI;
+        const droplets = [];
+        
+        const MAX_MESSAGES = 10;
+        let messageIndex = 0;
+        let messageCount = 0;
+
+        // Lista de frases románticas secuenciales originales
+        const loveMessages = [
+            "Te Amo",
+            "Mi Amor",
+            "Para Siempre",
+            "Mi corazón es tuyo",
+            "Eres mi Vida",
+            "Quiero todo Contigo",
+            "Siempre Juntos",
+            "Amor de mi vida"
+        ];
+
+        // Convierte el valor hexadecimal del input color a formato RGB matemático
+        function hexToRgb(hex) {
+            let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        // Calcula las coordenadas paramétricas de la silueta del corazón
+        const heartPath = (angle, currentScale) => {
+            const x = 16 * Math.pow(Math.sin(angle), 3);
+            const y = -(13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle));
+            return {
+                x: x * currentScale + canvas.width / 2,
+                y: y * currentScale + canvas.height / 2.5
+            };
+        };
+
+        // Dibuja los trazos simulando gotas sueltas y textura de brocha
+        function drawBrushStroke(posX, posY, isStatic = false, n = false) {
+            const radius = n ? (1.5 * Math.random() + 0.5) : (4 * Math.random() + 2);
+            const alpha = 0.2 * Math.random() + 0.3;
+            
+            // Dispersión sutil aleatoria alrededor del punto de origen
+            const scatterX = posX + (10 * Math.random() - 5);
+            const scatterY = posY + (10 * Math.random() - 5);
+            const rgb = hexToRgb(paintColor);
+
+            ctx.beginPath();
+            ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+            ctx.arc(scatterX, scatterY, radius, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Guardamos las partículas fluidas para la animación de goteo posterior
+            droplets.push({
+                x: scatterX,
+                y: scatterY,
+                r: 0.6 * radius,
+                alpha: alpha,
+                isStatic: isStatic,
+                color: rgb
+            });
+        }
+
+        // Dibuja el texto con tipografía cursiva estilizada en la posición del click
+        function drawPaintedText(text, posX, posY) {
+            const fontSize = 3 * scale;
+            const rgb = hexToRgb(paintColor);
+
+            ctx.font = `bold ${fontSize}px 'Brush Script MT', cursive`;
+            ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.9)`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            
+            // Sombras estéticas de la tipografía
+            ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
+            ctx.shadowBlur = 5;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+            
+            ctx.fillText(text, posX, posY);
+
+            // Reseteo de sombras tras escribir
+            ctx.shadowColor = "transparent";
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+
+            // Genera salpicaduras de pintura debajo de las letras pintadas
+            const textWidth = ctx.measureText(text).width;
+            const textDropletsCount = Math.floor(2.5 * text.length);
+
+            for (let i = 0; i < textDropletsCount; i++) {
+                const dropX = posX - textWidth / 2 + Math.random() * textWidth;
+                const dropY = posY + Math.random() * (0.7 * fontSize);
+                
+                droplets.push({
+                    x: dropX,
+                    y: dropY,
+                    r: 2.5 * Math.random() + 1,
+                    alpha: 0.4 * Math.random() + 0.5,
+                    isStatic: false,
+                    color: rgb
+                });
+            }
+        }
+
+        // Animación constante: hace que las gotas caigan levemente (gravedad) y se desvanezcan
+        function updateDroplets() {
+            for (let i = droplets.length - 1; i >= 0; i--) {
+                const drop = droplets[i];
+                
+                if (!drop.isStatic) {
+                    drop.y += 0.5 + 0.5 * Math.random(); // Velocidad física de caída
+                }
+                
+                drop.alpha *= 0.99; // Atenuación gradual
+                
+                ctx.beginPath();
+                ctx.fillStyle = `rgba(${drop.color.r}, ${drop.color.g}, ${drop.color.b}, ${drop.alpha})`;
+                ctx.arc(drop.x, drop.y, drop.r, 0, 2 * Math.PI);
+                ctx.fill();
+
+                // Limpieza de memoria para partículas invisibles
+                if (drop.alpha < 0.01) {
+                    droplets.splice(i, 1);
+                }
+            }
+        }
+
+        // Bucle principal de renderizado
+        function animate() {
+            animationFrameId = requestAnimationFrame(animate);
+            
+            // Traza la silueta del corazón paso a paso de forma fluida
+            if (t <= maxT) {
+                const coords = heartPath(t, scale);
+                drawBrushStroke(coords.x, coords.y);
+                t += 0.02;
+            }
+            updateDroplets();
+        }
+
+        // Configuración y dimensionamiento del Canvas adaptable a pantallas
+        function setupCanvas() {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            scale = Math.min(canvas.width, canvas.height) / 45;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            t = 0;
+            droplets.length = 0;
+            messageCount = 0;
+            
+            animate();
+        }
+
+        /* ==========================================
+           MANEJO DE EVENTOS E INTERACTIVIDAD
+           ========================================== */
+
+        // Evento al hacer click en el fondo para colocar textos
+        canvas.addEventListener("click", (event) => {
+            if (messageCount < MAX_MESSAGES) {
+                drawPaintedText(loveMessages[messageIndex], event.clientX, event.clientY);
+                messageIndex = (messageIndex + 1) % loveMessages.length;
+                messageCount++;
+            } else {
+                console.log("Límite de mensajes en pantalla alcanzado.");
+            }
+        });
+
+        // Actualización en tiempo real al mover el selector de color
+        colorPicker.addEventListener("input", (event) => {
+            paintColor = event.target.value;
+        });
+
+        // Eventos de botones y cambios en el tamaño de la pantalla
+        redrawButton.addEventListener("click", setupCanvas);
+        window.addEventListener("resize", setupCanvas);
+
+        // Inicialización automática de la escena
+        setupCanvas();
+    </script>
+</body>
+</html>
