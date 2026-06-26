@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corazón de Cristal</title>
+    <!-- Tailwind CSS para el diseño base -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Trebuchet MS', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        canvas {
+            display: block;
+        }
+        .instructions {
+            position: absolute;
+            bottom: 8%;
+            width: 100%;
+            text-align: center;
+            padding: 0 20px;
+            box-sizing: border-box;
+            color: rgba(255, 255, 255, .8);
+            font-size: clamp(14px, 4vw, 18px);
+            pointer-events: none;
+            transition: opacity .5s, text-shadow 1s ease;
+            z-index: 10;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Pantalla de carga inicial -->
+    <div id="loader" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black transition-opacity duration-500">
+        <svg class="animate-pulse w-12 h-12 text-pink-500 mb-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
+        </svg>
+        <span class="text-pink-300 font-medium tracking-widest uppercase text-sm">Cargando...</span>
+    </div>
+
+    <!-- Texto de instrucciones en pantalla -->
+    <div class="instructions" id="instructions">Mantén presionado para reparar el corazón</div>
+    
+    <!-- Lienzo de animación -->
+    <canvas id="crystal-canvas"></canvas>
+
+    <script>
+        // --- CONFIGURACIÓN PERSONALIZABLE ---
+        const CONFIG = {
+            title: "Corazón de Cristal",
+            instructionText: "Mantén presionado para reparar el corazón",
+            finalMessage: "Tú reparaste mi corazón y salvaste mi alma", 
+            themeColor: "#ff0066" // Color base del cristal
+        };
+
+        document.title = CONFIG.title;
+
+        const canvas = document.getElementById('crystal-canvas');
+        const ctx = canvas.getContext('2d');
+        const instructionsDiv = document.getElementById('instructions');
+        const loader = document.getElementById('loader');
+
+        let width, height;
+        let isMobile = false;
+        let triangles = [];
+        let repairProgress = 0; 
+        let isPressing = 0; 
+        let audioCtx = null;
+        let resizeTimeout = null;
+
+        let hue = 320, saturation = 80, lightness = 50;
+
+        // Convierte el color hexadecimal a HSL para efectos lumínicos reactivos
+        function applyThemeColor(hex) {
+            let r = parseInt(hex.substring(1, 3), 16) / 255;
+            let g = parseInt(hex.substring(3, 5), 16) / 255;
+            let b = parseInt(hex.substring(5, 7), 16) / 255;
+            
+            let max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0;
+            } else {
+                let d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            
+            hue = h * 360;
+            saturation = s * 100;
+            lightness = l * 100;
+
+            document.body.style.background = `radial-gradient(circle, hsl(${hue}, ${saturation}%, ${lightness * 0.3}%) 0%, hsl(${hue}, ${saturation}%, ${lightness * 0.08}%) 60%, #000000 100%)`;
+            instructionsDiv.style.textShadow = `0 0 15px hsl(${hue}, 100%, 60%)`;
+        }
+
+        function resizeCanvas() {
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            width = window.innerWidth;
+            height = window.innerHeight;
+            isMobile = width < 768;
+            
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = width + "px";
+            canvas.style.height = height + "px";
+            ctx.scale(dpr, dpr);
+        }
+
+        // Algoritmo Ray-Casting: Valida si un punto está dentro del perímetro del corazón
+        function isPointInHeart(point, polygon) {
+            let x = point.x, y = point.y;
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                let xi = polygon[i].x, yi = polygon[i].y;
+                let xj = polygon[j].x, yj = polygon[j].y;
+                let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        // Calcula el circuncentro matemático para la triangulación de Delaunay
+        function getCircumcircle(p1, p2, p3) {
+            let cpX = p1.x, cpY = p1.y;
+            let dpX = p2.x, dpY = p2.y;
+            let epX = p3.x, epY = p3.y;
+            let d = 2 * (cpX * (dpY - epY) + dpX * (epY - cpY) + epX * (cpY - dpY));
+            if (Math.abs(d) < 1e-5) return null;
+            
+            let u1 = cpX * cpX + cpY * cpY;
+            let u2 = dpX * dpX + dpY * dpY;
+            let u3 = epX * epX + epY * epY;
+            
+            let cx = (u1 * (dpY - epY) + u2 * (epY - cpY) + u3 * (cpY - dpY)) / d;
+            let cy = (u1 * (epX - dpX) + u2 * (cpX - epX) + u3 * (dpX - cpX)) / d;
+            return { x: cx, y: cy, r: Math.sqrt((cpX - cx) ** 2 + (cpY - cy) ** 2) };
+        }
+
+        // Construcción de la malla de la estructura geométrica
+        function buildHeartMesh() {
+            let vertices = [];
+            let sizeScale = Math.min(width, height) / 35;
+            
+            for (let t = 0; t < 2 * Math.PI; t += 0.25) {
+                let x = 16 * Math.pow(Math.sin(t), 3) * sizeScale;
+                let y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * sizeScale;
+                vertices.push({ x: x, y: y });
+            }
+
+            let heartOutline = [...vertices];
+            let minX = Math.min(...vertices.map(v => v.x));
+            let maxX = Math.max(...vertices.map(v => v.x));
+            let minY = Math.min(...vertices.map(v => v.y));
+            let maxY = Math.max(...vertices.map(v => v.y));
+            
+            let internalPointsCount = isMobile ? 35 : 60;
+            for (let i = 0; i < internalPointsCount; i++) {
+                let p = {
+                    x: minX + Math.random() * (maxX - minX),
+                    y: minY + Math.random() * (maxY - minY)
+                };
+                if (isPointInHeart(p, heartOutline)) {
+                    p.x += 0.1 * (Math.random() - 0.5);
+                    p.y += 0.1 * (Math.random() - 0.5);
+                    vertices.push(p);
+                }
+            }
+
+            // Triangulación de Delaunay nativa
+            let delaunayTriangles = function(pts) {
+                let xMin = Infinity, yMin = Infinity, xMax = -Infinity, yMax = -Infinity;
+                for (let p of pts) {
+                    if (p.x < xMin) xMin = p.x; if (p.y < yMin) yMin = p.y;
+                    if (p.x > xMax) xMax = p.x; if (p.y > yMax) yMax = p.y;
+                }
+                let dx = xMax - xMin, dy = yMax - yMin;
+                let maxDim = Math.max(dx, dy);
+                let midX = (xMin + xMax) / 2, midY = (yMin + yMax) / 2;
+                
+                let st1 = { x: midX - 20 * maxDim, y: midY - maxDim };
+                let st2 = { x: midX, y: midY + 20 * maxDim };
+                let st3 = { x: midX + 20 * maxDim, y: midY - maxDim };
+                
+                pts.push(st1, st2, st3);
+                let indices1 = pts.length - 3, indices2 = pts.length - 2, indices3 = pts.length - 1;
+                let mesh = [[indices1, indices2, indices3]];
+
+                for (let i = 0; i < pts.length - 3; i++) {
+                    let p = pts[i], edges = [], badTriangles = [];
+                    for (let j = 0; j < mesh.length; j++) {
+                        let t = mesh[j];
+                        let circ = getCircumcircle(pts[t[0]], pts[t[1]], pts[t[2]]);
+                        if (circ && Math.sqrt((p.x - circ.x) ** 2 + (p.y - circ.y) ** 2) <= circ.r + 1e-5) {
+                            badTriangles.push(j);
+                            edges.push([t[0], t[1]], [t[1], t[2]], [t[2], t[0]]);
+                        }
+                    }
+                    for (let j = badTriangles.length - 1; j >= 0; j--) mesh.splice(badTriangles[j], 1);
+                    
+                    let uniqueEdges = [];
+                    for (let j = 0; j < edges.length; j++) {
+                        let e = edges[j], isUnique = true;
+                        for (let k = 0; k < edges.length; k++) {
+                            if (j !== k && e[0] === edges[k][1] && e[1] === edges[k][0]) { isUnique = false; break; }
+                        }
+                        if (isUnique) uniqueEdges.push(e);
+                    }
+                    for (let e of uniqueEdges) mesh.push([e[0], e[1], i]);
+                }
+                mesh = mesh.filter(t => t[0] !== indices1 && t[0] !== indices2 && t[0] !== indices3 && t[1] !== indices1 && t[1] !== indices2 && t[1] !== indices3 && t[2] !== indices1 && t[2] !== indices2 && t[2] !== indices3);
+                pts.splice(-3, 3);
+                return mesh;
+            }(vertices);
+
+            let refSize = 16 * sizeScale;
+            triangles = [];
+
+            for (let t of delaunayTriangles) {
+                let p1 = vertices[t[0]], p2 = vertices[t[1]], p3 = vertices[t[2]];
+                let cx = (p1.x + p2.x + p3.x) / 3;
+                let cy = (p1.y + p2.y + p3.y) / 3;
+                
+                if (isPointInHeart({ x: cx, y: cy }, heartOutline)) {
+                    let area = Math.abs(p1.x * (p2.y - p3.y) + p2.x * (p3.y - p1.y) + p3.x * (p1.y - p2.y)) / 2;
+                    let nx = cx / refSize, ny = cy / refSize;
+                    let nz = 1.5 - Math.sqrt(nx * nx + ny * ny);
+                    
+                    nx += 0.5 * (Math.random() - 0.5);
+                    ny += 0.5 * (Math.random() - 0.5);
+                    nz += 0.5 * Math.random();
+                    
+                    let length = Math.sqrt(nx * nx + ny * ny + nz * nz);
+                    let normal = { x: nx / length, y: ny / length, z: nz / length };
+                    let crystalColor = `hsl(${hue + 20 * (Math.random() - 0.5)}, ${Math.max(30, saturation + 20 * (Math.random() - 0.5))}%, ${Math.max(20, Math.min(80, lightness + 40 * (Math.random() - 0.5)))}%)`;
+                    
+                    triangles.push({
+                        p1: p1, p2: p2, p3: p3, cx: cx, cy: cy, area: area, normal: normal, baseColor: crystalColor,
+                        hasGlint: Math.random() > 0.6,
+                        ex: (Math.random() - 0.5) * width * 1.5,
+                        ey: (Math.random() - 0.5) * height * 1.5,
+                        erotZ: (Math.random() - 0.5) * Math.PI * 4,
+                        rotXSpeed: 3 * (Math.random() - 0.5),
+                        rotYSpeed: 3 * (Math.random() - 0.5),
+                        randomOffset: Math.random() * Math.PI * 2
+                    });
+                }
+            }
+            
+            triangles.sort((a, b) => b.area - a.area);
+            
+            let words = CONFIG.finalMessage.trim().split(/\s+/);
+            for (let i = 0; i < words.length && i < triangles.length; i++) {
+                triangles[i].word = words[i];
+            }
+        }
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === "suspended") {
+                audioCtx.resume();
+            }
+        }
+
+        function startInteraction(e) {
+            if(e) e.preventDefault();
+            initAudio();
+            isPressing = 1;
+        }
+
+        function stopInteraction() {
+            isPressing = 0;
+            if (repairProgress > 0.3 && audioCtx) {
+                [1200, 2400, 3100, 4800, 6000].forEach(freq => {
+                    let osc = audioCtx.createOscillator();
+                    let gainNode = audioCtx.createGain();
+                    osc.type = "sine";
+                    osc.frequency.setValueAtTime(freq + 100 * (Math.random() - 0.5), audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.01);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3 + 0.4 * Math.random());
+                    osc.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 1);
+                });
+            }
+        }
+
+        window.addEventListener("mousedown", startInteraction);
+        window.addEventListener("mouseup", stopInteraction);
+        window.addEventListener("touchstart", startInteraction, { passive: false });
+        window.addEventListener("touchend", stopInteraction);
+        window.addEventListener("resize", () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                resizeCanvas();
+                buildHeartMesh();
+            }, 250);
+        });
+
+        applyThemeColor(CONFIG.themeColor);
+        resizeCanvas();
+        buildHeartMesh();
+
+        setTimeout(() => {
+            loader.style.opacity = "0";
+            setTimeout(() => loader.style.display = "none", 500);
+        }, 300);
+
+        function loop() {
+            ctx.clearRect(0, 0, width, height);
+            
+            if (isPressing === 1) {
+                repairProgress += 0.007; 
+                if (instructionsDiv.style.opacity !== "0") instructionsDiv.style.opacity = "0";
+            } else {
+                repairProgress -= 0.03; 
+                if (repairProgress <= 0 && instructionsDiv.style.opacity !== "1") instructionsDiv.style.opacity = "1";
+            }
+            repairProgress = Math.max(0, Math.min(1, repairProgress));
+
+            let time = performance.now() * 0.001;
+            let scalePulse = 1;
+            let yOffset = 0;
+            
+            if (repairProgress > 0.5) {
+                let factor = 2 * (repairProgress - 0.5);
+                scalePulse = (1 + 0.03 * Math.pow(Math.sin(3 * time), 4) + 0.015 * Math.pow(Math.sin(3 * time + 0.4), 4)) * factor + (1 - factor);
+                yOffset = 6 * Math.sin(3 * time) * factor;
+            }
+
+            let lx = Math.sin(0.7 * time);
+            let ly = 0.5 * Math.cos(0.5 * time) - 0.5;
+            let lz = 1.2;
+            let lLength = Math.sqrt(lx * lx + ly * ly + lz * lz);
+            lx /= lLength; ly /= lLength; lz /= lLength;
+
+            ctx.save();
+            ctx.translate(width / 2, height / 2 - 20 + yOffset);
+            ctx.scale(scalePulse, scalePulse);
+
+            for (let i = 0; i < triangles.length; i++) {
+                let tri = triangles[i];
+                let driftX = tri.ex + 15 * Math.sin(0.5 * time + tri.randomOffset);
+                let driftY = tri.ey + 15 * Math.cos(0.5 * time + tri.randomOffset);
+                
+                let cx = tri.cx * repairProgress + driftX * (1 - repairProgress);
+                let cy = tri.cy * repairProgress + driftY * (1 - repairProgress);
+                let rotZ = tri.erotZ * (1 - repairProgress);
+                
+                let scaleX = Math.cos(time * tri.rotXSpeed) * (1 - repairProgress) + 1 * repairProgress;
+                let scaleY = Math.cos(time * tri.rotYSpeed) * (1 - repairProgress) + 1 * repairProgress;
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(rotZ);
+                ctx.scale(scaleX, scaleY);
+                ctx.translate(-tri.cx, -tri.cy);
+                
+                ctx.beginPath();
+                ctx.moveTo(tri.p1.x, tri.p1.y);
+                ctx.lineTo(tri.p2.x, tri.p2.y);
+                ctx.lineTo(tri.p3.x, tri.p3.y);
+                ctx.closePath();
+
+                let dotProduct = tri.normal.x * lx + tri.normal.y * ly + tri.normal.z * lz;
+                if (dotProduct > 0) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${0.4 * dotProduct * repairProgress})`;
+                } else {
+                    ctx.fillStyle = `rgba(0, 0, 0, ${0.5 * -dotProduct * repairProgress})`;
+                }
+                ctx.fill();
+
+                ctx.lineWidth = 1.5;
+                let spec = 0.6 * Math.max(0, dotProduct);
+                ctx.strokeStyle = `rgba(${255}, ${51 + 100 * repairProgress}, ${133 + 50 * repairProgress}, ${0.1 + 0.2 * repairProgress + spec})`;
+                ctx.stroke();
+
+                if (tri.hasGlint) {
+                    ctx.fillStyle = `rgba(255, 100, 150, ${0.1 + 0.5 * spec * Math.abs(Math.sin(1.5 * time + tri.randomOffset))})`;
+                    ctx.fill();
+                }
+
+                if (tri.word && repairProgress > 0.1) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${0.8 * (1 - repairProgress)})`;
+                    let textFontSize = Math.max(10, 1.5 * (window.devicePixelRatio || 1));
+                    ctx.font = `bold ${textFontSize}px "Trebuchet MS"`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(tri.word, tri.cx, tri.cy);
+                }
+                ctx.restore();
+            }
+            ctx.restore();
+
+            // MODIFICACIÓN: El mensaje ahora se activa SOLO cuando el corazón está 100% completo (repairProgress === 1)
+            if (repairProgress >= 1) {
+                ctx.fillStyle = `rgba(255, 255, 255, 1)`;
+                let mainFontSize = Math.max(18, Math.min(width / 18, 32));
+                ctx.font = `bold ${mainFontSize}px "Trebuchet MS"`;
+                ctx.textAlign = "center";
+                ctx.shadowColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                ctx.shadowBlur = 20;
+
+                let maxTextWidth = 0.85 * width;
+                let lineHeight = 1.3 * mainFontSize;
+                let rawWords = CONFIG.finalMessage.trim().split(/\s+/);
+                let lines = [];
+                let currentLine = rawWords[0] || "";
+
+                for (let i = 1; i < rawWords.length; i++) {
+                    let word = rawWords[i];
+                    ctx.measureText(currentLine + " " + word).width < maxTextWidth ? currentLine += " " + word : (lines.push(currentLine), currentLine = word);
+                }
+                lines.push(currentLine);
+
+                let startY = height / 2 + Math.min(width, height) / 2.2 - ((lines.length - 1) * lineHeight) / 2;
+                for (let i = 0; i < lines.length; i++) {
+                    ctx.fillText(lines[i], width / 2, startY + i * lineHeight);
+                }
+                ctx.shadowBlur = 0; 
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
