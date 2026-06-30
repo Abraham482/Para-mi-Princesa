@@ -1,0 +1,228 @@
+<html lang="es">
+<head>
+    <meta name="robots" content="noindex, nofollow">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Te extraño...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #fce4ec;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', sans-serif;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        .heart-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .heart-wrapper {
+            position: absolute;
+            top: -100px;
+            animation: fallDown linear forwards;
+        }
+        .heart {
+            position: relative;
+            pointer-events: none;
+            --heart-size: 20px;
+            width: var(--heart-size);
+            height: var(--heart-size);
+            background-color: #ff69b4;
+            animation: sway ease-in-out infinite alternate;
+        }
+        .heart::after, .heart::before {
+            content: '';
+            position: absolute;
+            width: var(--heart-size);
+            height: var(--heart-size);
+            border-radius: 50%;
+            background-color: inherit;
+        }
+        .heart::before { top: -50%; left: 0; }
+        .heart::after { top: 0; left: 50%; }
+        
+        @keyframes fallDown {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(110vh); opacity: 0; }
+        }
+        @keyframes sway {
+            from { transform: translateX(-25px) rotate(-45deg); }
+            to { transform: translateX(25px) rotate(-45deg); }
+        }
+        .shake {
+            animation: shake .5s;
+            animation-iteration-count: infinite;
+        }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .transition-transform { transition: transform .3s ease; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen text-center p-4">
+
+    <!-- Contenedor de lluvia de corazones -->
+    <div class="heart-container" id="heartContainer"></div>
+
+    <!-- Tarjeta Principal -->
+    <div id="container" class="relative z-10 max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center space-y-6 transform transition-all duration-500">
+        <h1 id="main-text" class="text-4xl font-bold text-pink-600 mb-2">Te extraño mucho... 🥺</h1>
+        
+        <div class="relative w-64 h-64 mx-auto overflow-hidden rounded-2xl border-4 border-pink-200 shadow-inner">
+            <img id="dog-image" src="https://media.giphy.com/media/L95W4wv8nnb9K/giphy.gif" alt="Imagen" class="w-full h-full object-cover transition-opacity duration-300">
+        </div>
+        
+        <div class="flex flex-col sm:flex-row gap-4 w-full justify-center mt-6 items-center">
+            <button id="btn-yes" class="bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:scale-110 active:scale-95 text-xl w-full sm:w-auto">Yo también 💖</button>
+            <button id="btn-no" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-8 rounded-full shadow-md transition-transform text-xl w-full sm:w-auto">No me importa 😒</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de los Estados (Textos e Imágenes Decodificadas)
+        const initialMessage = "Te extraño mucho... 🥺";
+        const sadMessage = "¡Por favor, no digas eso! 😭😭😭";
+        const happyMessage = "¡SABÍA QUE ME AMABAS! 🥰🥰🥰";
+
+        const sadGifUrl = "https://media.giphy.com/media/L95W4wv8nnb9K/giphy.gif";
+        const cryingGifUrl = "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExc21vczVmbmY0d3dncmp6bjdzNHQ1cnF5aW52YzltODFtYjZ4NnlueiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OzlmyoTC2n3aOTXGFi/giphy.gif";
+        const happyGifUrl = "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHVkcjRkZWdzOTd2bHR1dzNtcTlvOHlhYXBjaDFmbW8wa2lrbTY1MCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/cbD4NSXZutjebF8cd8/giphy.gif";
+
+        const colors = ["#ff74a4", "#ffb3c1", "#ff266b", "#ff4d88", "#ff69b4"];
+        
+        let noClickCount = 0;
+        let heartInterval = null;
+
+        const btnYes = document.getElementById("btn-yes");
+        const btnNo = document.getElementById("btn-no");
+        const dogImage = document.getElementById("dog-image");
+        const mainText = document.getElementById("main-text");
+        const container = document.getElementById("container");
+        const heartContainer = document.getElementById("heartContainer");
+
+        // Acción al pulsar "No me importa"
+        btnNo.addEventListener("click", () => {
+            noClickCount++;
+            dogImage.src = cryingGifUrl;
+            mainText.innerText = sadMessage;
+
+            // Achicar el botón NO hasta desaparecer
+            const noScale = 1 - 0.15 * noClickCount;
+            if (noScale > 0) {
+                btnNo.style.transform = `scale(${noScale})`;
+            } else {
+                btnNo.style.display = "none";
+            }
+
+            // Agrandar el botón SÍ
+            const yesScale = 1 + 0.2 * noClickCount;
+            btnYes.style.transform = `scale(${yesScale})`;
+
+            // Efecto sacudida en la tarjeta
+            container.classList.add("shake");
+            setTimeout(() => {
+                container.classList.remove("shake");
+            }, 500);
+        });
+
+        // Acción al pulsar "Yo también"
+        btnYes.addEventListener("click", () => {
+            dogImage.src = happyGifUrl;
+            mainText.innerText = happyMessage;
+            btnNo.style.display = "none";
+            btnYes.style.display = "none";
+            document.body.style.backgroundColor = "#f8bbd0";
+            startHeartRain();
+        });
+
+        // Generador de Corazones Flotantes
+        function createHeart() {
+            if (!heartContainer) return;
+            const wrapper = document.createElement("div");
+            wrapper.classList.add("heart-wrapper");
+
+            const heart = document.createElement("div");
+            heart.classList.add("heart");
+
+            wrapper.appendChild(heart);
+            
+            wrapper.style.left = Math.random() * 95 + "vw";
+            wrapper.style.animationDuration = (Math.random() * 4 + 3) + "s";
+            heart.style.animationDelay = (Math.random() * 2 + 1.5) + "s";
+
+            const size = Math.random() * 30 + 10;
+            heart.style.setProperty("--heart-size", size + "px");
+
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            heart.style.backgroundColor = randomColor;
+            heart.style.filter = `blur(${Math.random() * 1.5}px)`;
+            heart.style.opacity = Math.random() * 0.5 + 0.5;
+
+            heartContainer.appendChild(wrapper);
+
+            setTimeout(() => {
+                if (wrapper && wrapper.parentNode) {
+                    wrapper.remove();
+                }
+            }, parseFloat(wrapper.style.animationDuration) * 1000 + 500);
+        }
+
+        function startHeartRain() {
+            for (let i = 0; i < 40; i++) {
+                setTimeout(createHeart, Math.random() * 1500);
+            }
+            if (!heartInterval) {
+                heartInterval = setInterval(createHeart, 200);
+            }
+        }
+
+        document.addEventListener("contextmenu", function(e) {
+            e.preventDefault();
+        });
+
+        document.addEventListener("keydown", function(e) {
+            if (e.ctrlKey && ["c", "u", "s", "p"].includes(e.key.toLowerCase())) {
+                e.preventDefault();
+            }
+            if (e.key === "F12") {
+                e.preventDefault();
+            }
+        });
+
+        setInterval(() => {
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) return;
+            
+            const threshold = 160;
+            const isWidthDevTools = window.outerWidth - window.innerWidth > threshold;
+            const isHeightDevTools = window.outerHeight - window.innerHeight > threshold;
+
+            if (isWidthDevTools || isHeightDevTools) {
+                document.body.innerHTML = `
+                    <div style="display:flex; justify-content:center; align-items:center; height:100vh; flex-direction:column; text-align:center; font-family:sans-serif;">
+                        <h1>Acceso no permitido.</h1>
+                        <p>Por favor cierra las herramientas de desarrollo.</p>
+                    </div>`;
+            }
+        }, 100);
+    </script>
+</body>
+</html>
