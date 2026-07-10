@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Para Dani ❤️</title>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Variables de color con paleta Rose Gold / Cream */
+        :root {
+            --bg-gradient-1: #fcf8f2;
+            --bg-gradient-2: #f5ebe0;
+            --primary-text: #2c2523;
+            --accent-rose: #e8c5c8;
+            --accent-gold: #d4af37;
+            --glass-bg: rgba(255, 255, 255, 0.55);
+            --glass-border: rgba(255, 255, 255, 0.7);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-1), var(--bg-gradient-2));
+            color: var(--primary-text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Canvas para las partículas y destellos interactivos */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Contenedor interactivo principal */
+        .main-wrapper {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Pantalla de Bienvenida (Glassmorphism) */
+        #welcome-screen {
+            height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 30px;
+            transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1), transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .intro-box {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            padding: 50px 35px;
+            border-radius: 24px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.04);
+            max-width: 650px;
+            transform: translateY(0);
+            transition: transform 0.5s ease;
+        }
+
+        .intro-box h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            font-weight: 400;
+            line-height: 1.4;
+            margin-bottom: 2.5rem;
+            color: #3d3431;
+        }
+
+        .intro-box h1 span {
+            font-style: italic;
+            color: #b58285;
+            font-weight: 600;
+        }
+
+        /* Botón de Inicio Animado */
+        .btn-discover {
+            background: linear-gradient(135deg, #e8b4b8, #cd9398);
+            color: white;
+            border: none;
+            padding: 16px 36px;
+            font-size: 1.1rem;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 400;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(205, 147, 152, 0.4);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .btn-discover:hover {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 12px 30px rgba(205, 147, 152, 0.6);
+        }
+
+        /* Contenedor de la Historia Virtual */
+        #story-gallery {
+            display: none;
+            width: 100%;
+            max-width: 700px;
+            padding: 80px 20px;
+            flex-direction: column;
+            align-items: center;
+            gap: 100px;
+            opacity: 0;
+            transition: opacity 1.5s ease;
+        }
+
+        /* Indicación táctil sutil */
+        .tap-hint {
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.85rem;
+            color: #8c7a76;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-top: -60px;
+            margin-bottom: 20px;
+            opacity: 0.7;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+            100% { opacity: 0.4; }
+        }
+
+        /* ===================================================
+           EFECTO FLIP 3D PARA LAS POLAROIDS
+           =================================================== */
+        .polaroid-frame {
+            width: 100%;
+            max-width: 380px;
+            height: 480px;
+            perspective: 1000px;
+            opacity: 0;
+            transform: translateY(40px) rotate(-3deg);
+            transition: all 1.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .polaroid-frame:nth-child(even) {
+            transform: translateY(40px) rotate(3deg);
+        }
+
+        .polaroid-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        /* EFECTO HOVER: Solo se aplica en dispositivos que tienen cursor real (computadoras) */
+        @media (hover: hover) {
+            .polaroid-frame:hover .polaroid-inner {
+                transform: rotateY(180deg);
+            }
+        }
+
+        /* EFECTO CLICK/TAP: Se aplica mediante JS añadiendo la clase '.flipped' */
+        .polaroid-frame.flipped .polaroid-inner {
+            transform: rotateY(180deg) !important;
+        }
+
+        /* Caras frontal y trasera de la Polaroid */
+        .polaroid-front, .polaroid-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 4px;
+            background: #ffffff;
+            padding: 18px 18px 45px 18px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.06);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Reverso de la Polaroid (Mensaje de amor) */
+        .polaroid-back {
+            transform: rotateY(180deg);
+            background: #fffdfa;
+            border: 1px solid rgba(232, 197, 200, 0.4);
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+        }
+
+        .polaroid-back .heart-icon {
+            font-size: 2.5rem;
+            color: #b58285;
+            margin-bottom: 20px;
+            animation: beat 1.5s infinite;
+        }
+
+        @keyframes beat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .polaroid-back p {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.15rem;
+            line-height: 1.7;
+            color: #4a3e3b;
+            font-style: italic;
+        }
+
+        /* Contenedores de imagen */
+        .image-container {
+            width: 100%;
+            height: 330px;
+            overflow: hidden;
+            border-radius: 2px;
+            background-color: #fafafa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.6s ease;
+        }
+
+        .handwritten-caption {
+            font-family: 'Great Vibes', cursive;
+            font-size: 2.2rem;
+            text-align: center;
+            margin-top: auto;
+            color: #3a3230;
+            text-shadow: 0.5px 0.5px 1px rgba(0,0,0,0.05);
+        }
+
+        /* Mensaje de Cierre Romántico */
+        #love-letter {
+            opacity: 0;
+            transform: translateY(30px);
+            text-align: center;
+            max-width: 550px;
+            margin-top: 40px;
+            padding: 40px 20px;
+            border-top: 1px dashed rgba(181, 130, 133, 0.3);
+            transition: all 2s ease;
+        }
+
+        #love-letter h2 {
+            font-family: 'Great Vibes', cursive;
+            font-size: 3.5rem;
+            color: #b58285;
+            margin-bottom: 15px;
+        }
+
+        #love-letter p {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.25rem;
+            line-height: 1.9;
+            color: #554844;
+            font-style: italic;
+        }
+
+        /* Clases de Control en JS */
+        .hidden-transition {
+            opacity: 0 !important;
+            transform: translateY(-50px) scale(0.95) !important;
+            pointer-events: none;
+        }
+
+        .reveal-active {
+            opacity: 1 !important;
+            transform: translateY(0) rotate(-3deg) !important;
+        }
+
+        .reveal-active-alt {
+            opacity: 1 !important;
+            transform: translateY(0) rotate(3deg) !important;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="particle-canvas"></canvas>
+
+    <audio id="romantic-track" src="bonita.m4a" loop></audio>
+
+    <div class="main-wrapper">
+        
+        <section id="welcome-screen">
+            <div class="intro-box">
+                <h1>Mándame esa foto con la que pensaste:<br><span>"Qué suerte tengo al tenerla"</span></h1>
+                <button class="btn-discover" onclick="startSurprise()">Descubrir mi suerte 🥰</button>
+            </div>
+        </section>
+
+        <main id="story-gallery">
+            
+            <p class="tap-hint">Toca o pasa el cursor por las fotos ✨</p>
+
+            <div class="polaroid-frame" id="p1" onclick="toggleFlip(this)">
+                <div class="polaroid-inner">
+                    <div class="polaroid-front">
+                        <div class="image-container">
+                            <img src="preciosa1.png" alt="Instante especial">
+                        </div>
+                        <div class="handwritten-caption">Esa sonrisa que ilumina todo 🥹</div>
+                    </div>
+                    <div class="polaroid-back">
+                        <div class="heart-icon">💖</div>
+                        <p>"Me basta verte sonreír un segundo para recordar por qué eres mi lugar seguro en el mundo, tu felicidad lo cura absolutamente todo"</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="polaroid-frame" id="p2" onclick="toggleFlip(this)">
+                <div class="polaroid-inner">
+                    <div class="polaroid-front">
+                        <div class="image-container">
+                            <img src="preciosa2.png" alt="Cómplices">
+                        </div>
+                        <div class="handwritten-caption">Tu mirada tan tierna y única 🥺</div>
+                    </div>
+                    <div class="polaroid-back">
+                        <div class="heart-icon">❤️‍🩹</div>
+                        <p>"Hay una paz mágica en tus ojos de la que nunca me quiero alejar, me encanta cómo me miras, y cómo haces que todo se siente bien"</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="polaroid-frame" id="p3" onclick="toggleFlip(this)">
+                <div class="polaroid-inner">
+                    <div class="polaroid-front">
+                        <div class="image-container">
+                            <img src="preciosa3.png" alt="Mi favorita">
+                        </div>
+                        <div class="handwritten-caption">Y mi suerte de tenerte conmigo</div>
+                    </div>
+                    <div class="polaroid-back">
+                        <div class="heart-icon">💘</div>
+                        <p>"Cada día a tu lado confirmo que la vida me dio el regalo más hermoso de todos, eres mi regalo más hermoso y el futuro que siempre quiero elegir"</p>
+                    </div>
+                </div>
+            </div>
+
+            <section id="love-letter">
+                <h2>Eres mi persona favorita</h2>
+                <p>No hacía falta una tendencia en tik tok ni en otra app para saber la inmensa suerte que tengo al tenerte en mi vida, pero quería recordártelo de una forma única, especial y tan llena de magia como tú misma, gracias por ser mi amor, mi princesa y mi amor unico 💗</p>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        /* ===================================================
+           1. EFECTO CANVAS: PARTICULAS DE FONDO Y DESTELLOS PERSONALIZADOS VIBRANTES
+           =================================================== */
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let particles = [];
+        let sparkles = []; // Lista para los destellos del cursor
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Partículas suaves flotando al fondo
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = canvas.height + Math.random() * 100;
+                this.size = Math.random() * 8 + 4;
+                this.speedY = Math.random() * 0.5 + 0.15;
+                this.opacity = Math.random() * 0.3 + 0.05;
+                this.isHeart = Math.random() > 0.6;
+                this.swing = Math.random() * 1;
+                this.swingSpeed = Math.random() * 0.015;
+            }
+
+            update() {
+                this.y -= this.speedY;
+                this.x += Math.sin(this.swing) * 0.25;
+                this.swing += this.swingSpeed;
+
+                if (this.y < -20) {
+                    this.y = canvas.height + 20;
+                    this.x = Math.random() * canvas.width;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = `rgba(224, 182, 185, ${this.opacity})`;
+                ctx.beginPath();
+                if (this.isHeart) {
+                    let topY = this.y - this.size / 2;
+                    ctx.moveTo(this.x, this.y);
+                    ctx.bezierCurveTo(this.x - this.size, topY, this.x - this.size * 1.5, this.y + this.size / 3, this.x, this.y + this.size);
+                    ctx.bezierCurveTo(this.x + this.size * 1.5, this.y + this.size / 3, this.x + this.size, topY, this.x, this.y);
+                } else {
+                    ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+                }
+                ctx.fill();
+            }
+        }
+
+        // Destellos en tus colores favoritos (Azul y Morado vivos)
+        class Sparkle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 18 + 8;
+                this.angle = Math.random() * Math.PI * 2;
+                this.speedX = (Math.random() - 0.5) * 1.5;
+                this.speedY = (Math.random() - 0.5) * 1.5;
+                this.opacity = 1;
+                this.decay = Math.random() * 0.022 + 0.015; 
+
+                const favoriteColors = [
+                    '#00d2ff', // Azul cian / eléctrico
+                    '#bd00ff', // Morado mágico / lavanda encendido
+                    '#ffffff', // Blanco estrella
+                    '#7000ff'  // Violeta vibrante
+                ];
+                this.color = favoriteColors[Math.floor(Math.random() * favoriteColors.length)];
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.opacity -= this.decay;
+                this.angle += 0.06; 
+            }
+
+            draw() {
+                if (this.opacity <= 0) return;
+
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                
+                ctx.shadowBlur = this.size * 1.4;
+                ctx.shadowColor = this.color;
+                
+                ctx.fillStyle = this.color;
+                
+                ctx.beginPath();
+                for (let i = 0; i < 4; i++) {
+                    ctx.rotate(Math.PI / 2);
+                    ctx.lineTo(0, this.size);
+                    ctx.lineTo(this.size * 0.13, this.size * 0.13);
+                }
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        function initParticles() {
+            for (let i = 0; i < 35; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 1. Partículas de fondo
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            // 2. Destellos personalizados de cursor
+            for (let i = sparkles.length - 1; i >= 0; i--) {
+                const s = sparkles[i];
+                s.update();
+                s.draw();
+                if (s.opacity <= 0) {
+                    sparkles.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(animateParticles);
+        }
+
+        initParticles();
+        animateParticles();
+
+
+        /* ===================================================
+           2. EVENTOS: DETECCIÓN DE MOVIMIENTO PARA AGREGAR BRILLOS MÁGICOS
+           =================================================== */
+        window.addEventListener('mousemove', (e) => {
+            if (Math.random() > 0.55) {
+                sparkles.push(new Sparkle(e.clientX, e.clientY));
+            }
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (Math.random() > 0.50) {
+                const touch = e.touches[0];
+                sparkles.push(new Sparkle(touch.clientX, touch.clientY));
+            }
+        });
+
+
+        /* ===================================================
+           3. INTERACCIÓN Y CONTROL NARRATIVO
+           =================================================== */
+        const audio = document.getElementById('romantic-track');
+
+        function startSurprise() {
+            const welcome = document.getElementById('welcome-screen');
+            welcome.classList.add('hidden-transition');
+
+            setTimeout(() => {
+                welcome.style.display = 'none';
+                
+                const gallery = document.getElementById('story-gallery');
+                gallery.style.display = 'flex';
+                
+                setTimeout(() => { gallery.style.opacity = '1'; }, 50);
+
+                // Activar música
+                audio.volume = 0.45;
+                audio.play().catch(err => console.log("Audio bloqueado:", err));
+
+                // Aparición escalonada de las Polaroids
+                setTimeout(() => {
+                    document.getElementById('p1').classList.add('reveal-active');
+                }, 800);
+
+                setTimeout(() => {
+                    document.getElementById('p2').classList.add('reveal-active-alt');
+                }, 3000);
+
+                setTimeout(() => {
+                    document.getElementById('p3').classList.add('reveal-active');
+                }, 5200);
+
+                // Aparición del mensaje de cierre final
+                setTimeout(() => {
+                    const letter = document.getElementById('love-letter');
+                    letter.style.opacity = '1';
+                    letter.style.transform = 'translateY(0)';
+                }, 7500);
+
+            }, 1200);
+        }
+
+        /* ===================================================
+           NUEVO SISTEMA FLIP PERFECTO PARA MÓVILES y PC
+           =================================================== */
+        function toggleFlip(card) {
+            // Detecta si el dispositivo es táctil
+            const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            
+            if (isTouchDevice) {
+                // Si la carta clickeada ya está volteada, la regresamos al frente
+                if (card.classList.contains('flipped')) {
+                    card.classList.remove('flipped');
+                } else {
+                    // Primero quitamos la vuelta a cualquier otra carta para mantener el orden
+                    document.querySelectorAll('.polaroid-frame').forEach(frame => {
+                        frame.classList.remove('flipped');
+                    });
+                    // Volteamos la carta seleccionada
+                    card.classList.add('flipped');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
