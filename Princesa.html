@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Para mi Princesa Hermosa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500;700&family=Inter:wght@300;400;600&family=Fredoka+One&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fdf2f8; /* tailwind pink-50 */
+            overflow-x: hidden;
+        }
+        
+        .font-cursive {
+            font-family: 'Dancing Script', cursive;
+        }
+
+        .font-cute {
+            font-family: 'Fredoka One', cursive; /* Una fuente más gordita y tierna para los personajes */
+        }
+
+        /* Animación de aparición suave para las pantallas */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        /* Animación de corazones y personajes cayendo */
+        .falling-item {
+            position: fixed;
+            top: -10vh;
+            z-index: 0;
+            pointer-events: none;
+            animation: fall linear forwards, sway ease-in-out infinite alternate;
+        }
+
+        @keyframes fall {
+            to { transform: translateY(110vh) rotate(360deg); }
+        }
+
+        @keyframes sway {
+            from { margin-left: -30px; }
+            to { margin-left: 30px; }
+        }
+
+        /* Efecto de foto polaroid romántica */
+        .polaroid {
+            background: white;
+            padding: 1rem 1rem 2.5rem 1rem;
+            box-shadow: 0 10px 15px -3px rgba(225, 29, 72, 0.1), 0 4px 6px -2px rgba(225, 29, 72, 0.05);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 8px;
+            border: 1px solid #fce7f3;
+            position: relative;
+        }
+        
+        .polaroid:hover {
+            transform: scale(1.05) translateY(-10px) !important;
+            box-shadow: 0 20px 25px -5px rgba(225, 29, 72, 0.3), 0 10px 10px -5px rgba(225, 29, 72, 0.2);
+            z-index: 20;
+        }
+
+        .img-container {
+            overflow: hidden;
+            border-radius: 4px;
+        }
+
+        .img-container img {
+            transition: transform 0.5s ease;
+        }
+
+        .polaroid:hover .img-container img {
+            transform: scale(1.08);
+        }
+
+        /* Decoraciones de personajes */
+        .sticker-corner {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            z-index: 30;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+            animation: bounce-slow 3s infinite;
+        }
+
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .rainbow-bg {
+            background: linear-gradient(120deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+        }
+        
+        .ajuste-foto5 {
+            object-fit: cover;
+            object-position: center center !important; /* Centra sus lentes */
+        }
+
+        .ajuste-foto6 {
+            object-fit: cover;
+            object-position: right 30% !important; /* Obliga al marco a mostrar el lado derecho de la foto, que es donde está su carita */
+        }
+        
+    </style>
+</head>
+<body class="text-gray-800 relative antialiased">
+
+    <!-- Contenedor para la lluvia de ternura -->
+    <div id="falling-container"></div>
+
+    <!-- Botón Volver -->
+    <button id="btn-volver" class="fixed top-4 left-4 z-50 bg-white/90 backdrop-blur-md text-pink-600 font-bold font-cute px-4 py-2 text-sm md:text-base rounded-full shadow-lg border-2 border-pink-200 transform transition hover:scale-105 hidden focus:outline-none">
+        ⬅️ Volver
+    </button>
+
+    <section id="inicio" class="min-h-screen flex flex-col justify-center items-center relative z-10 px-4 text-center animate-fade-in">
+        <!-- Sticker de Stitch -->
+        <img src="Stitch.gif" onerror="this.outerHTML='<div class=\'text-8xl mb-4 animate-bounce\'>🐨💙</div>'" alt="Stitch" class="w-32 h-32 mb-4 animate-bounce drop-shadow-xl">
+        
+        <div class="bg-white/80 backdrop-blur-md p-6 md:p-16 rounded-[3rem] shadow-2xl border-4 border-blue-200 max-w-4xl mx-auto transform transition duration-500 hover:scale-[1.02] relative">
+            
+            <h1 class="font-cursive text-5xl md:text-8xl text-rose-600 mb-6 drop-shadow-sm leading-tight">
+                Admirando tu Belleza
+            </h1>
+            <p class="text-xl md:text-2xl text-gray-700 mb-10 font-light max-w-2xl mx-auto leading-relaxed">
+                Hice este espacio solo para ti, porque a veces las palabras no me alcanzan para decirte lo preciosa que eres y lo mucho que me encantas, mi niña hermosa.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#" id="btn-sorpresa" class="inline-block rainbow-bg hover:opacity-90 text-white font-bold font-cute tracking-wide py-4 px-8 rounded-full transition duration-300 shadow-[0_10px_20px_rgba(255,154,158,0.4)] transform hover:-translate-y-1">
+                    Sorpresa de Ositos 🧸🌈
+                </a>
+                <a href="#" id="btn-galeria" class="inline-block bg-blue-500 hover:bg-blue-600 text-white font-bold font-cute tracking-wide py-4 px-8 rounded-full transition duration-300 shadow-[0_10px_20px_rgba(59,130,246,0.4)] transform hover:-translate-y-1">
+                    Mírate como yo te veo 💙
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section id="dia-nina" class="py-24 px-4 relative z-10 hidden">
+        <div class="max-w-4xl mx-auto bg-gradient-to-br from-pink-200 via-purple-100 to-blue-100 p-6 md:p-14 rounded-[3rem] shadow-2xl border-4 border-white relative overflow-hidden transform hover:-rotate-1 transition duration-500">
+            <!-- Osito Cariñoso Decorativo -->
+            <img src="osito.png" onerror="this.outerHTML='<div class=\'absolute -top-12 -right-10 text-[10rem] opacity-30 rotate-12\'>🧸🌈</div>'" alt="Osito Cariñoso" class="absolute -top-10 -right-10 w-48 opacity-80 rotate-12">
+            
+            <div class="relative z-20 text-center">
+                <h2 class="font-cute text-3xl md:text-5xl text-pink-500 mb-6 drop-shadow-md tracking-wide">
+                    ¡Feliz Día de la Niña! 🎀🧸
+                </h2>
+                <div class="w-32 h-2 bg-gradient-to-r from-pink-400 to-blue-400 mx-auto mb-8 rounded-full"></div>
+                <div class="bg-white/60 p-6 rounded-3xl backdrop-blur-sm shadow-inner">
+                    <p class="text-xl md:text-2xl text-gray-800 leading-relaxed font-medium mb-6">
+                        Hoy, 11 de octubre, no podía dejar pasar la oportunidad de celebrar a esa niña hermosa que llevas dentro. 
+                    </p>
+                    <p class="text-lg md:text-xl text-gray-700 leading-relaxed font-light mb-6">
+                        Amo esa ternura tuya, esa forma tan tuya de emocionarte con las cosas que te gustan (¡como Stitch y los Ositos!), tus ocurrencias y tu manera tan pura de ver el mundo. Prometo siempre cuidar de tu corazón, proteger tu sonrisa y hacer todo lo posible para que esa niña interior siempre se sienta amada, segura y feliz a mi lado.
+                    </p>
+                    <p class="text-3xl font-cursive text-blue-600 mt-8 font-bold">
+                        Eres mi niña preciosa, hoy y siempre. ✨💙
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="galeria" class="py-20 px-4 relative z-10 bg-white/50 backdrop-blur-md border-y-4 border-pink-100 hidden">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="font-cute text-5xl md:text-6xl text-center text-rose-500 mb-4 tracking-wide">Lo que veo en ti 😍</h2>
+            <p class="text-center text-gray-700 mb-16 text-xl font-medium max-w-2xl mx-auto">Me paso horas viendo tus fotos, admirando cada detalle tuyo que me vuelve loco.</p>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12">
+                
+                <!-- FOTO 1 -->
+                <div class="polaroid" style="transform: rotate(-2deg);">
+                    <div class="sticker-corner -top-6 -left-6 text-4xl">🥺</div>
+                    <div class="img-container w-full h-[22rem] sm:h-[28rem]">
+                        <img src="foto1.jpg" onerror="this.src='https://placehold.co/600x800/ffb6c1/ffffff?text=Tu+Foto+Aqui'" alt="Tus ojos preciosos" class="w-full h-full object-cover">
+                    </div>
+                    <p class="font-cursive text-3xl text-center mt-6 text-rose-700 font-bold">Tus ojos preciosos</p>
+                    <p class="text-center text-md text-gray-600 mt-2 font-medium">Esa mirada tuya en la que me pierdo y que me dice todo sin hablar 💘</p>
+                </div>
+
+                <!-- FOTO 2 -->
+                <div class="polaroid" style="transform: rotate(3deg);">
+                    <div class="sticker-corner -bottom-6 -right-6 text-4xl">💙</div>
+                    <div class="img-container w-full h-[22rem] sm:h-[28rem]">
+                        <img src="foto2.jpg" onerror="this.src='https://placehold.co/600x800/ffb6c1/ffffff?text=Tu+Foto+Aqui'" alt="Tu sonrisa con brackets" class="w-full h-full object-cover">
+                    </div>
+                    <p class="font-cursive text-3xl text-center mt-6 text-blue-600 font-bold">Tu sonrisa perfecta</p>
+                    <p class="text-center text-md text-gray-600 mt-2 font-medium">Esa sonrisa hermosa que me vuelve loco, me encanta cómo te ves 💕</p>
+                </div>
+
+                <!-- FOTO 3 -->
+                <div class="polaroid" style="transform: rotate(-1deg);">
+                    <div class="sticker-corner -top-6 -right-6 text-5xl">🤓</div>
+                    <div class="img-container w-full h-[22rem] sm:h-[28rem]">
+                        <img src="foto3.jpg" onerror="this.src='https://placehold.co/600x800/ffb6c1/ffffff?text=Tu+Foto+Aqui'" alt="Con tus lentes" class="w-full h-full object-cover">
+                    </div>
+                    <p class="font-cursive text-3xl text-center mt-6 text-purple-600 font-bold">Preciosa con lentes</p>
+                    <p class="text-center text-md text-gray-600 mt-2 font-medium">Te ves tan hermosa e inteligente, es un detalle tuyo que me fascina 💗</p>
+                </div>
+
+                <!-- FOTO 4 -->
+                <div class="polaroid" style="transform: rotate(2deg);">
+                    <div class="sticker-corner -bottom-6 -left-6 text-4xl">💖</div>
+                    <div class="img-container w-full h-[22rem] sm:h-[28rem]">
+                        <img src="foto4.jpg" onerror="this.src='https://placehold.co/600x800/ffb6c1/ffffff?text=Tu+Foto+Aqui'" alt="Tu carita">
+                    </div>
+                    <p class="font-cursive text-3xl text-center mt-6 text-rose-700 font-bold">Eres arte</p>
+                    <p class="text-center text-md text-gray-600 mt-2 font-medium">Cada facción de tu rostro es perfecta para mí, no me canso de admirarte 😍</p>
+                </div>
+
+                <!-- FOTO 5 -->
+                <div class="polaroid" style="transform: rotate(-3deg);">
+                    <div class="sticker-corner -top-8 -left-4 text-5xl">🧸</div>
+                    <div class="img-container w-full h-[22rem] sm:h-[28rem]">
+                        <img src="foto5.jpg" class="ajuste-foto5" onerror="this.src='https://placehold.co/600x800/ffb6c1/ffffff?text=Tu+Foto+Aqui'" alt="Tu ternura">
+                    </div>
+                    <p class="font-cursive text-3xl text-center mt-6 text-pink-600 font-bold">Tu inmensa ternura</p>
+                    <p class="text-center text-md text-gray-600 mt-2 font-medium">Esa vibra tan linda que transmites y que me hace sentir en paz 🥺</p>
+                </div>
+
+                <!-- FOTO 6 -->
+                <div class="polaroid" style="transform: rotate(1deg);">
+                    <div class="sticker-corner -bottom-5 -right-5 text-4xl">✨</div>
+                    <div class="img-container w-full h-[22rem] sm:h-[28rem]">
+                        <img src="foto6.jpg" class="ajuste-foto6" onerror="this.src='https://placehold.co/600x800/ffb6c1/ffffff?text=Tu+Foto+Aqui'" alt="La más hermosa">
+                    </div>
+                    <p class="font-cursive text-3xl text-center mt-6 text-rose-700 font-bold">La mujer más hermosa</p>
+                    <p class="text-center text-md text-gray-600 mt-2 font-medium">Física y sentimentalmente, eres todo lo que siempre quise 🥰</p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <section id="carta" class="py-24 px-4 relative z-10 hidden">
+        <div class="max-w-4xl mx-auto bg-white p-6 md:p-16 rounded-3xl shadow-2xl relative border-4 border-blue-100">
+            <!-- Detalles decorativos -->
+            <div class="absolute top-6 left-6 text-blue-200 text-5xl font-serif">❝</div>
+            <div class="absolute bottom-6 right-6 text-pink-200 text-5xl font-serif">❞</div>
+            
+            <h2 class="font-cute text-4xl text-blue-500 mb-10 text-center border-b-4 border-blue-50 pb-6 tracking-wide">
+                Para la dueña de mis suspiros 💙
+            </h2>
+            
+            <div class="font-cursive text-xl md:text-3xl leading-loose text-gray-800 space-y-6 text-justify">
+                <p>Mi princesa preciosa 🥺</p>
+                <p>
+                    Quería encontrar una forma diferente de decirte lo mucho que me encantas, sé que a veces me quedo mirando tus fotos, pero es que no puedo evitarlo, admiro cada detalle tuyo 
+                </p>
+                <p>
+                    Me encanta lo hermosa que te ves siempre, esa sonrisa tuya que me ilumina la vida, y esos ojitos preciosos que tienes 👀✨ contigo me siento el hombre más afortunado, porque no solo tengo a la mujer más guapa, sino también a la de los sentimientos más hermosos y tiernos 🥺💖💖
+                </p>
+                <p>
+                    Gracias por dejarme ser parte de tu vida, por enseñarme a amar bonito y por permitirme admirarte todos los días te amooo infinitamente 🥰💗
+                </p>
+                <p class="text-right mt-12 text-rose-600 font-bold flex justify-end items-center gap-3">
+                    Con todo mi amor para ti mi bebé hermosa
+                    <span class="text-4xl animate-pulse">❤️🧸🐨</span>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+        <div id="music-tooltip" class="bg-white/90 backdrop-blur font-cute text-blue-600 text-sm px-4 py-2 rounded-full shadow-lg border-2 border-blue-200 transition-opacity duration-300">
+            ¡Toca para escuchar! 🎵
+        </div>
+        
+        <button id="music-btn" class="bg-blue-500 hover:bg-blue-600 text-white p-5 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:shadow-[0_0_30px_rgba(59,130,246,0.8)] transition duration-300 transform hover:scale-110 flex items-center justify-center focus:outline-none">
+            <!-- Icono Play -->
+            <svg id="icon-play" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+            </svg>
+            <!-- Icono Pausa -->
+            <svg id="icon-pause" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 hidden" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+            </svg>
+        </button>
+        
+        <audio id="bg-music" loop>
+            <source src="Corazon.mp3" type="audio/mpeg">
+        </audio>
+    </div>
+
+    <script>
+        // DOM Elements
+        const sectionInicio = document.getElementById('inicio');
+        const sectionDiaNina = document.getElementById('dia-nina');
+        const sectionGaleria = document.getElementById('galeria');
+        const sectionCarta = document.getElementById('carta');
+        
+        const btnSorpresa = document.getElementById('btn-sorpresa');
+        const btnGaleria = document.getElementById('btn-galeria');
+        const btnVolver = document.getElementById('btn-volver');
+
+        // Función para ocultar todo y resetear animaciones
+        function hideAllSections() {
+            sectionInicio.classList.add('hidden');
+            sectionDiaNina.classList.add('hidden');
+            sectionGaleria.classList.add('hidden');
+            sectionCarta.classList.add('hidden');
+            btnVolver.classList.add('hidden');
+
+            // Limpiar clases de animación para que se puedan volver a usar
+            sectionInicio.classList.remove('animate-fade-in');
+            sectionDiaNina.classList.remove('animate-fade-in');
+            sectionGaleria.classList.remove('animate-fade-in');
+            sectionCarta.classList.remove('animate-fade-in');
+        }
+
+        // Navegación a Sorpresa de Ositos
+        btnSorpresa.addEventListener('click', (e) => {
+            e.preventDefault(); // Evita que la página salte
+            hideAllSections();
+            
+            sectionDiaNina.classList.remove('hidden');
+            sectionDiaNina.classList.add('animate-fade-in');
+            
+            sectionCarta.classList.remove('hidden');
+            sectionCarta.classList.add('animate-fade-in');
+            
+            btnVolver.classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Navegación a Galería
+        btnGaleria.addEventListener('click', (e) => {
+            e.preventDefault();
+            hideAllSections();
+            
+            sectionGaleria.classList.remove('hidden');
+            sectionGaleria.classList.add('animate-fade-in');
+            
+            sectionCarta.classList.remove('hidden');
+            sectionCarta.classList.add('animate-fade-in');
+            
+            btnVolver.classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Botón de Volver al Inicio
+        btnVolver.addEventListener('click', () => {
+            hideAllSections();
+            sectionInicio.classList.remove('hidden');
+            sectionInicio.classList.add('animate-fade-in');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Lógica de la música
+        const musicBtn = document.getElementById('music-btn');
+        const bgMusic = document.getElementById('bg-music');
+        const iconPlay = document.getElementById('icon-play');
+        const iconPause = document.getElementById('icon-pause');
+        const tooltip = document.getElementById('music-tooltip');
+        let isPlaying = false;
+
+        musicBtn.addEventListener('click', () => {
+            if (isPlaying) {
+                bgMusic.pause();
+                iconPlay.classList.remove('hidden');
+                iconPause.classList.add('hidden');
+            } else {
+                bgMusic.play().catch(error => console.log("Reproducción bloqueada:", error));
+                iconPlay.classList.add('hidden');
+                iconPause.classList.remove('hidden');
+                tooltip.style.opacity = '0';
+                setTimeout(() => tooltip.classList.add('hidden'), 300);
+            }
+            isPlaying = !isPlaying;
+        });
+
+        // Lógica de lluvia de ternura
+        function createFallingItem() {
+            const item = document.createElement('div');
+            item.classList.add('falling-item');
+            
+            const items = ['💜', '💖', '💙', '🧸', '🎀', '✨', '😻', '💖'];
+            item.innerHTML = items[Math.floor(Math.random() * items.length)];
+            item.style.left = Math.random() * 100 + 'vw';
+            
+            const fallDuration = Math.random() * 6 + 6;
+            const size = Math.random() * 20 + 15;
+            
+            item.style.fontSize = size + 'px';
+            item.style.opacity = Math.random() * 0.5 + 0.3;
+            
+            if(item.innerHTML === '💙' || item.innerHTML === '🐨') {
+                item.style.fontSize = (size + 10) + 'px';
+            }
+
+            item.style.animationDuration = `${fallDuration}s, ${Math.random() * 2 + 1.5}s`;
+            
+            document.getElementById('falling-container').appendChild(item);
+            
+            setTimeout(() => { item.remove(); }, fallDuration * 1000);
+        }
+
+        setInterval(createFallingItem, 400);
+    </script>
+</body>
+</html>
